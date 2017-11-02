@@ -14,6 +14,7 @@ from functools import partial
 
 #pandapower
 import pandapower as pp
+import pandapower.shortcircuit as sc
 import pandapower.networks as pnw
 
 #pandapower gui
@@ -95,7 +96,7 @@ class mainWindow(QMainWindow):
     """ Create main window """
     def __init__(self):
         super(mainWindow, self).__init__()
-        uic.loadUi('resources/ui/main.ui', self)
+        uic.loadUi('resources/ui/main_develop.ui', self)
 
         self.mainPrintMessage("Welcome to pandapower version: " +
                               pp.__version__ +
@@ -119,10 +120,11 @@ class mainWindow(QMainWindow):
         self.collectionsDoubleClick = False
         self.tabWidget.setCurrentIndex(0) #set firtst tab
 
-        # toolbar
+        # menubar
         self.actionNew_Network.triggered.connect(self.mainEmptyClicked)
         self.actionLoad.triggered.connect(self.mainLoadClicked)
         self.actionSave.triggered.connect(self.mainSaveClicked)
+        self.actionQuit.triggered.connect(self.mainQuitClicked)
 
         self.actionMV_oberrhein.triggered.connect(partial(self.load_pandapower_network, pnw.mv_oberrhein, "MV Oberrhein"))
         self.actionCase9.triggered.connect(partial(self.load_pandapower_network, pnw.case9, "IEEE Case 9"))
@@ -130,13 +132,15 @@ class mainWindow(QMainWindow):
         self.actionAbout.triggered.connect(self.show_license)
         self.actionDocumentation.triggered.connect(self.show_docs)
 
-        #main
+        # toolbar
         self.actionrunpp.triggered.connect(self.runpp)
         self.actionrunpp.triggered.connect(self.lossesSummary)
         self.actionrunpp.setIcon(QIcon('resources/icons/runpp.png'))
 
         self.actionrunppOptions.triggered.connect(self.runpp_options)
         self.actionrunppOptions.setIcon(QIcon('resources/icons/runpp_options.png'))
+
+        self.actionSC.triggered.connect(self.runsc)
 
         # show initialised and updated element tables
         self.tabWidget_inspect.setCurrentIndex(0)
@@ -152,6 +156,11 @@ class mainWindow(QMainWindow):
         self.show_result_table()
         self.tabWidget_result.currentChanged.connect(self.show_result_table)
         # self.tabWidget_result.currentChanged.connect(self.set_table_tabs_inactive)
+
+        # show initialised and updated short circuit results tables
+        self.tabWidget_result_sc.setCurrentIndex(0)
+        self.show_result_sc_table()
+        self.tabWidget_result_sc.currentChanged.connect(self.show_result_sc_table)
 
         #interpreter
         self.runTests.clicked.connect(self.runPandapowerTests)
@@ -245,6 +254,20 @@ class mainWindow(QMainWindow):
         except:
             self.mainPrintMessage("Case not saved, maybe empty?")
 
+    def mainQuitClicked(self):
+        reply = QMessageBox.question(
+            self, "Message",
+            "Are you sure you want to quit? Any unsaved work will be lost.",
+            QMessageBox.Save | QMessageBox.Close | QMessageBox.Cancel,
+            QMessageBox.Save)
+
+        if reply == QMessageBox.Close:
+            app.quit()
+        elif reply == QMessageBox.Save:
+            self.mainSaveClicked()
+        else:
+            pass
+
     def runpp(self):
         try:
             pp.runpp(self.net, **self.net._runpp_options)
@@ -292,6 +315,15 @@ class mainWindow(QMainWindow):
         loss_pct = losses / total_load_kw['p_kw']
         self.main_message.append(str(abs(loss_pct * 100)))
 
+    def runsc(self):
+        try:
+            sc.calc_sc(self.net)
+            self.mainPrintMessage(str(self.net))
+        except pp.LoadflowNotConverged:
+            self.mainPrintMessage("Power Flow did not Converge!")
+        except:
+            self.mainPrintMessage("Error occured - empty network?")
+
     def get_element_index(self):
         index = self.tabWidget_inspect.currentIndex()
         tab_list = {0: 'bus', 1: 'line', 2: 'switch', 3: 'load', 4: 'sgen', 5: 'ext_grid',
@@ -308,6 +340,17 @@ class mainWindow(QMainWindow):
         element = tab_list[index]
         return element
 
+    def get_result_sc_index(self):
+        index = self.tabWidget_result_sc.currentIndex()
+#        tab_list = {0: 'res_bus_sc', 1: 'res_line_sc', 2: 'res_load_sc', 3: 'res_sgen_sc', 4: 'res_ext_grid_sc',
+ #                   5: 'res_trafo_sc', 6: 'res_trafo3w_sc', 7: 'res_gen_sc', 8: 'res_shunt_sc', 9: 'res_ward_sc',
+#                    10: 'res_xward_sc', 11: 'res_dcline_sc'}
+        tab_list = {0: 'res_bus', 1: 'res_line', 2: 'res_load', 3: 'res_sgen', 4: 'res_ext_grid',
+                    5: 'res_trafo', 6: 'res_trafo3w', 7: 'res_gen', 8: 'res_shunt', 9: 'res_ward',
+                    10: 'res_xward', 11: 'res_dcline'}
+        element = tab_list[index]
+        return element
+
     def show_element_table(self):
         element = self.get_element_index()
         self.show_table(element, self.element_table)
@@ -315,6 +358,10 @@ class mainWindow(QMainWindow):
     def show_result_table(self):
         element = self.get_result_index()
         self.show_table(element, self.result_table)
+
+    def show_result_sc_table(self):
+        element = self.get_result_sc_index()
+        self.show_table(element, self.result_sc_table)
 
     def show_table(self, element, table_widget):
         table = self.net[element]
@@ -698,7 +745,7 @@ def createSampleNetwork():
     b3 = pp.create_bus(net, vn_kv=0.4, name="Load Bus", geodata=(5, 22))
 
     #create bus elements
-    pp.create_ext_grid(net, bus=b1, vm_pu=1.02, name="Grid Connection")
+    pp.create_ext_grid(net, bus=b1, vm_pu=1.02, s_sc_max_mva=2, rx_max=0.1, name="Grid Connection")
     pp.create_load(net, bus=b3, p_kw=100, q_kvar=50, name="Load")
 
     #create branch elements

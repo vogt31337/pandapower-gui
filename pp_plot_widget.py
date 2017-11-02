@@ -11,15 +11,16 @@ import sys
 from PyQt5 import QtGui, QtCore, QtWidgets
 import pandapower.networks as nw
 import pandapower.plotting as plot
+import pandapower as pp
 
 class MainWindow(QtWidgets.QMainWindow):
 
-    def __init__(self, net):
+    def __init__(self):
 
         super(MainWindow, self).__init__()
 
-        self.net = net
-
+#        self.net = net
+        self.net = pp.create_empty_network()
         self.setGeometry(300, 300, 400, 300)
 
         btn = QtWidgets.QPushButton("ok", self)
@@ -53,6 +54,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    main_window = MainWindow(nw.mv_oberrhein())
+    main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec_())
