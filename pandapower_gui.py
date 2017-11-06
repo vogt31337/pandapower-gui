@@ -157,11 +157,6 @@ class mainWindow(QMainWindow):
         self.tabWidget_result.currentChanged.connect(self.show_result_table)
         # self.tabWidget_result.currentChanged.connect(self.set_table_tabs_inactive)
 
-        # show initialised and updated short circuit results tables
-        self.tabWidget_result_sc.setCurrentIndex(0)
-        self.show_result_sc_table()
-        self.tabWidget_result_sc.currentChanged.connect(self.show_result_sc_table)
-
         #interpreter
         self.runTests.clicked.connect(self.runPandapowerTests)
 
@@ -317,12 +312,15 @@ class mainWindow(QMainWindow):
 
     def runsc(self):
         try:
-            sc.calc_sc(self.net)
-            self.mainPrintMessage(str(self.net))
+            sc.calc_sc(self.net, ip=True)
+ #           self.mainPrintMessage(str(self.net))
         except pp.LoadflowNotConverged:
             self.mainPrintMessage("Power Flow did not Converge!")
         except:
             self.mainPrintMessage("Error occured - empty network?")
+        self.tabWidget_result_sc.setCurrentIndex(0)
+        self.show_result_sc_table()
+        self.tabWidget_result_sc.currentChanged.connect(self.show_result_sc_table)
 
     def get_element_index(self):
         index = self.tabWidget_inspect.currentIndex()
@@ -342,12 +340,12 @@ class mainWindow(QMainWindow):
 
     def get_result_sc_index(self):
         index = self.tabWidget_result_sc.currentIndex()
-#        tab_list = {0: 'res_bus_sc', 1: 'res_line_sc', 2: 'res_load_sc', 3: 'res_sgen_sc', 4: 'res_ext_grid_sc',
- #                   5: 'res_trafo_sc', 6: 'res_trafo3w_sc', 7: 'res_gen_sc', 8: 'res_shunt_sc', 9: 'res_ward_sc',
-#                    10: 'res_xward_sc', 11: 'res_dcline_sc'}
-        tab_list = {0: 'res_bus', 1: 'res_line', 2: 'res_load', 3: 'res_sgen', 4: 'res_ext_grid',
-                    5: 'res_trafo', 6: 'res_trafo3w', 7: 'res_gen', 8: 'res_shunt', 9: 'res_ward',
-                    10: 'res_xward', 11: 'res_dcline'}
+        tab_list = {0: 'res_bus_sc', 1: 'res_line_sc', 2: 'res_load_sc', 3: 'res_sgen_sc', 4: 'res_ext_grid_sc',
+                    5: 'res_trafo_sc', 6: 'res_trafo3w_sc', 7: 'res_gen_sc', 8: 'res_shunt_sc', 9: 'res_ward_sc',
+                    10: 'res_xward_sc', 11: 'res_dcline_sc'}
+#        tab_list = {0: 'res_bus', 1: 'res_line', 2: 'res_load', 3: 'res_sgen', 4: 'res_ext_grid',
+#                   5: 'res_trafo', 6: 'res_trafo3w', 7: 'res_gen', 8: 'res_shunt', 9: 'res_ward',
+#                    10: 'res_xward', 11: 'res_dcline'}
         element = tab_list[index]
         return element
 
@@ -361,6 +359,7 @@ class mainWindow(QMainWindow):
 
     def show_result_sc_table(self):
         element = self.get_result_sc_index()
+#        element = self.get_result_index()
         self.show_table(element, self.result_sc_table)
 
     def show_table(self, element, table_widget):
@@ -382,10 +381,14 @@ class mainWindow(QMainWindow):
         """
         par = []
         res = []
+        res_sc = []
         for tb in list(self.net.keys()):
             if isinstance(self.net[tb], pd.DataFrame) and len(self.net[tb]) > 0:
                 if 'res_' in tb:
-                    res.append(tb)
+                    if "_sc" in tb:
+                        res_sc.append(tb)
+                    else:
+                        res.append(tb)
                 else:
                     par.append(tb)
 
@@ -407,6 +410,16 @@ class mainWindow(QMainWindow):
                 self.tabWidget_result.setTabEnabled(res_tab_list[result], True)
             else:
                 self.tabWidget_result.setTabEnabled(res_tab_list[result], False)
+        res_tab_sc_list = {
+            'res_bus_sc': 0, 'res_dcline_sc': 11, 'res_ext_grid_sc': 4, 'res_gen_sc': 7, 'res_line_sc': 1,
+            'res_load_sc': 2, 'res_sgen_sc': 3, 'res_shunt_sc': 8, 'res_trafo_sc': 5, 'res_trafo3w_sc': 6,
+            'res_ward_sc': 9, 'res_xward_sc': 10}
+        for result_sc in res_tab_sc_list.keys():
+            if result_sc in res_sc:
+                self.tabWidget_result_sc.setTabEnabled(res_tab_sc_list[result_sc], True)
+            else:
+                self.tabWidget_result_sc.setTabEnabled(res_tab_sc_list[result_sc], False)
+
 
     def table_doubleclicked(self, element, table_widget, cell):
         try:
