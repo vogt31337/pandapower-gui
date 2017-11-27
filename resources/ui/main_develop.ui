@@ -458,8 +458,8 @@
    <widget class="QTabWidget" name="tabWidget">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>10</y>
+      <x>0</x>
+      <y>0</y>
       <width>1091</width>
       <height>591</height>
      </rect>
@@ -997,15 +997,16 @@
      <attribute name="title">
       <string>Network Plot</string>
      </attribute>
-     <widget class="QWidget" name="widget_plot" native="true">
+     <widget class="QWidget" name="verticalLayoutWidget">
       <property name="geometry">
        <rect>
-        <x>40</x>
+        <x>30</x>
         <y>20</y>
-        <width>1001</width>
-        <height>531</height>
+        <width>1011</width>
+        <height>521</height>
        </rect>
       </property>
+      <layout class="QVBoxLayout" name="plot_vbox"/>
      </widget>
     </widget>
    </widget>
