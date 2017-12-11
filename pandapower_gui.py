@@ -140,8 +140,9 @@ class mainWindow(QMainWindow):
         self.actionrunppOptions.triggered.connect(self.runpp_options)
         self.actionrunppOptions.setIcon(QIcon('resources/icons/runpp_options.png'))
         # run shortcircuit
-        self.actionSC.triggered.connect(self.runsc)
+#        self.actionSC.triggered.connect(self.runsc)
         self.actionSC.setIcon(QIcon('resources/icons/shortcircuit.png'))
+        self.actionSC.triggered.connect(self.runsc_options)
         # plot networks
        # self.actionPlot.triggered.connect(self.plot_network)
 
@@ -228,6 +229,8 @@ class mainWindow(QMainWindow):
             self.net._runpp_options = dict()
 #        self.ipyConsole.executeCommand("del(net)")
         #self.ipyConsole.clearTerminal()
+        if not "_runsc_options" in self.net:
+            self.net._runsc_options = dict()
         self.ipyConsole.printText("\n\n"+"-"*40)
         self.ipyConsole.printText("\nNew net loaded \n")
         self.ipyConsole.printText("-"*40+"\n\n")
@@ -280,6 +283,13 @@ class mainWindow(QMainWindow):
         except Exception as e:
             print(e)
 
+    def runsc_options(self):
+        try:
+            runscOptions(self.net, parent=self)
+            #            self.options.show()
+        except Exception as e:
+            print(e)
+
     def lossesSummary(self):
         """ print the losses in each element that has losses """
         # get total losses
@@ -312,7 +322,7 @@ class mainWindow(QMainWindow):
 
     def runsc(self):
         try:
-            sc.calc_sc(self.net, ip=True)
+            sc.calc_sc(self.net, **self.net._runsc_options)
  #           self.mainPrintMessage(str(self.net))
         except pp.LoadflowNotConverged:
             self.mainPrintMessage("Power Flow did not Converge!")
@@ -697,6 +707,40 @@ class mainWindow(QMainWindow):
             self.lastBusSelected = None
 
 
+class runscOptions(QDialog):
+    def __init__(self, net, parent=None):
+        super(runscOptions, self).__init__(parent=parent)
+        uic.loadUi('resources/ui/sc_widget.ui', self)
+        self.net = net
+        self.faults = {"3ph": self.sc_3ph, "2ph": self.sc_2ph}
+        self.cases = {"max": self.case_max, "min": self.case_min}
+        self.set_parameters(**self.net._runsc_options)
+        self.okBtn.clicked.connect(partial(self.exit_window, True, False))
+        self.cancelBtn.clicked.connect(partial(self.exit_window, False, False))
+        self.runBtn.clicked.connect(partial(self.exit_window, True, True))
+        self.show()
+
+    def set_parameters(self, **kwargs):
+        fault = kwargs.get("fault", "3ph")
+        case = kwargs.get("case", "max")
+        self.faults[fault].setChecked(True)
+        self.cases[case].setChecked(True)
+
+    def get_parameters(self):
+        for fault, widget in self.faults.items():
+            if widget.isChecked():
+                self.net._runsc_options["fault"] = fault
+        for case, widget in self.cases.items():
+            if widget.isChecked():
+                self.net._runsc_options["case"] = case
+
+    def exit_window(self, save, run):
+        if save:
+            self.get_parameters()
+        if run:
+            self.parent().runsc()
+        self.close()
+
 class runppOptions(QDialog):
     def __init__(self, net, parent=None):
         super(runppOptions, self).__init__(parent=parent)
@@ -772,9 +816,7 @@ def createSampleNetwork():
                                 name="Trafo")
     pp.create_line(net, from_bus=b2, to_bus=b3, length_km=0.1, name="Line",
                    std_type="NAYY 4x50 SE")
-
     return net
-
 
 if __name__ == '__main__':
     app = 0
