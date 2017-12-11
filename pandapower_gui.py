@@ -50,7 +50,6 @@ from IPython.lib import guisupport
 
 _GUI_VERSION = "dev 0"
 
-
 class QIPythonWidget(RichJupyterWidget):
     """
         Convenience class for a live IPython console widget.
@@ -105,12 +104,12 @@ class mainWindow(QMainWindow):
                               "\nGUI version: " +
                               _GUI_VERSION  + "\n" +
                               "\nNetwork variable stored in : net")
-        self.embedIpythonInterpreter()
-
+        self.embedIpythonInterpreter()  # embed the ipython
+        self.embedPlot()    # plot net layout in plot_vbox
         # collections builder setup
         self.lastBusSelected = None
-        self.embedCollectionsBuilder()
-        self.load_pandapower_network(createSampleNetwork, "GUI Example Network")
+        self.embedCollectionsBuilder()  # plot the network in main_build_frame
+        self.load_network(net=createSampleNetwork(), name="GUI Example Network")
         self.initialiseCollectionsPlot()
         self.ax.xaxis.set_visible(False)
         self.ax.yaxis.set_visible(False)
@@ -121,13 +120,14 @@ class mainWindow(QMainWindow):
         self.tabWidget.setCurrentIndex(0) #set firtst tab
 
         # menubar
-        self.actionNew_Network.triggered.connect(self.mainEmptyClicked)
+#        self.actionNew_Network.triggered.connect(self.mainEmptyClicked)
+        self.actionNew_Network.triggered.connect(self.clearMainCollectionBuilder)
         self.actionLoad.triggered.connect(self.mainLoadClicked)
         self.actionSave.triggered.connect(self.mainSaveClicked)
         self.actionQuit.triggered.connect(self.mainQuitClicked)
 
-        self.actionMV_oberrhein.triggered.connect(partial(self.load_pandapower_network, pnw.mv_oberrhein, "MV Oberrhein"))
-        self.actionCase9.triggered.connect(partial(self.load_pandapower_network, pnw.case9, "IEEE Case 9"))
+#        self.actionMV_oberrhein.triggered.connect(partial(self.load_pandapower_network, pnw.mv_oberrhein, "MV Oberrhein"))
+#        self.actionCase9.triggered.connect(partial(self.load_pandapower_network, pnw.case9, "IEEE Case 9"))
 
         self.actionAbout.triggered.connect(self.show_license)
         self.actionDocumentation.triggered.connect(self.show_docs)
@@ -139,8 +139,12 @@ class mainWindow(QMainWindow):
 
         self.actionrunppOptions.triggered.connect(self.runpp_options)
         self.actionrunppOptions.setIcon(QIcon('resources/icons/runpp_options.png'))
-
-        self.actionSC.triggered.connect(self.runsc)
+        # run shortcircuit
+#        self.actionSC.triggered.connect(self.runsc)
+        self.actionSC.setIcon(QIcon('resources/icons/shortcircuit.png'))
+        self.actionSC.triggered.connect(self.runsc_options)
+        # plot networks
+       # self.actionPlot.triggered.connect(self.plot_network)
 
         # show initialised and updated element tables
         self.tabWidget_inspect.setCurrentIndex(0)
@@ -170,10 +174,6 @@ class mainWindow(QMainWindow):
         self.license.setText(license_text.read())
         self.license.show()
 
-    def load_pandapower_network(self, network_function, name):
-        net = network_function()
-        self.load_network(net, name)
-
     def show_docs(self):
         self.docs = QWebView()
         self.docs.load(QUrl("https://pandapower.readthedocs.io"))
@@ -197,11 +197,12 @@ class mainWindow(QMainWindow):
                             \n =========== \n""")
 
         self.interpreter_vbox.addWidget(self.ipyConsole)
-        self.ipyConsole.pushVariables({"pp": pp})
+        self.ipyConsole.pushVariables({"pp": pp, "sc": sc})
 
-    def mainEmptyClicked(self):
-        net = pp.create_empty_network()
-        self.load_network(net, "Empty Network")
+    def embedPlot(self):
+        from pp_plot_widget import MainWindow
+        self.net_plot = MainWindow()
+        self.plot_vbox.addWidget(self.net_plot)
 
     def mainLoadClicked(self):
         file_to_open = ""
@@ -228,6 +229,8 @@ class mainWindow(QMainWindow):
             self.net._runpp_options = dict()
 #        self.ipyConsole.executeCommand("del(net)")
         #self.ipyConsole.clearTerminal()
+        if not "_runsc_options" in self.net:
+            self.net._runsc_options = dict()
         self.ipyConsole.printText("\n\n"+"-"*40)
         self.ipyConsole.printText("\nNew net loaded \n")
         self.ipyConsole.printText("-"*40+"\n\n")
@@ -280,6 +283,13 @@ class mainWindow(QMainWindow):
         except Exception as e:
             print(e)
 
+    def runsc_options(self):
+        try:
+            runscOptions(self.net, parent=self)
+            #            self.options.show()
+        except Exception as e:
+            print(e)
+
     def lossesSummary(self):
         """ print the losses in each element that has losses """
         # get total losses
@@ -312,7 +322,7 @@ class mainWindow(QMainWindow):
 
     def runsc(self):
         try:
-            sc.calc_sc(self.net, ip=True)
+            sc.calc_sc(self.net, **self.net._runsc_options)
  #           self.mainPrintMessage(str(self.net))
         except pp.LoadflowNotConverged:
             self.mainPrintMessage("Power Flow did not Converge!")
@@ -467,6 +477,11 @@ class mainWindow(QMainWindow):
 
     def res_dcline_clicked(self):
         self.res_message.setHtml(str(self.net.res_dcline.to_html()))
+        
+        
+    # plot networks
+   # def plot_network(self):
+        
 
     # interpreter
     def runPandapowerTests(self):
@@ -553,13 +568,15 @@ class mainWindow(QMainWindow):
         if redraw:
             self.drawCollections()
 
+    # clear the figure in main_build_frame
     def clearMainCollectionBuilder(self):
         self.ax.clear()
         print("figure cleared")
+        self.net = pp.create_empty_network()
         self.collections = {}
         self.drawCollections()
 
-
+    # show the network plot in main_build_frame
     def embedCollectionsBuilder(self):
         self.dpi = 100
         self.fig = plt.Figure()
@@ -688,8 +705,41 @@ class mainWindow(QMainWindow):
             except Exception as e:
                 print(e)
             self.lastBusSelected = None
-        	
 
+
+class runscOptions(QDialog):
+    def __init__(self, net, parent=None):
+        super(runscOptions, self).__init__(parent=parent)
+        uic.loadUi('resources/ui/sc_widget.ui', self)
+        self.net = net
+        self.faults = {"3ph": self.sc_3ph, "2ph": self.sc_2ph}
+        self.cases = {"max": self.case_max, "min": self.case_min}
+        self.set_parameters(**self.net._runsc_options)
+        self.okBtn.clicked.connect(partial(self.exit_window, True, False))
+        self.cancelBtn.clicked.connect(partial(self.exit_window, False, False))
+        self.runBtn.clicked.connect(partial(self.exit_window, True, True))
+        self.show()
+
+    def set_parameters(self, **kwargs):
+        fault = kwargs.get("fault", "3ph")
+        case = kwargs.get("case", "max")
+        self.faults[fault].setChecked(True)
+        self.cases[case].setChecked(True)
+
+    def get_parameters(self):
+        for fault, widget in self.faults.items():
+            if widget.isChecked():
+                self.net._runsc_options["fault"] = fault
+        for case, widget in self.cases.items():
+            if widget.isChecked():
+                self.net._runsc_options["case"] = case
+
+    def exit_window(self, save, run):
+        if save:
+            self.get_parameters()
+        if run:
+            self.parent().runsc()
+        self.close()
 
 class runppOptions(QDialog):
     def __init__(self, net, parent=None):
@@ -742,7 +792,7 @@ class runppOptions(QDialog):
 
 def displaySplashScreen(n=2):
     """ Create and display the splash screen """
-    splash_pix = QPixmap('resources/icons_components/splash.png')
+    splash_pix = QPixmap('resources/icons/panda-power.png')
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setMask(splash_pix.mask())
     splash.show()
@@ -766,7 +816,6 @@ def createSampleNetwork():
                                 name="Trafo")
     pp.create_line(net, from_bus=b2, to_bus=b3, length_km=0.1, name="Line",
                    std_type="NAYY 4x50 SE")
-
     return net
 
 if __name__ == '__main__':
