@@ -32,11 +32,11 @@ try:
     from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
     QT_VERSION = "5"
 except ImportError:
-    from PyQt4 import uic
-    from PyQt4 import *
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
-    from PyQt4.QtWebKit import QWebView
+    from qtpy import uic
+    from qtpy import *
+    from qtpy.QtCore import *
+    from qtpy.QtGui import *
+    from qtpy.QtWebEngineWidgets import *
     from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
     from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
     QT_VERSION = "4"
