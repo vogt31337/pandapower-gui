@@ -662,7 +662,7 @@
       <property name="movable">
        <bool>false</bool>
       </property>
-      <property name="tabBarAutoHide">
+      <property name="tabBarAutoHide" stdset="0">
        <bool>false</bool>
       </property>
       <widget class="QWidget" name="inspect_bus_tab">
@@ -798,7 +798,7 @@
       <property name="movable">
        <bool>false</bool>
       </property>
-      <property name="tabBarAutoHide">
+      <property name="tabBarAutoHide" stdset="0">
        <bool>false</bool>
       </property>
       <widget class="QWidget" name="results_bus_tab">
@@ -1017,7 +1017,7 @@
      <x>0</x>
      <y>0</y>
      <width>1110</width>
-     <height>21</height>
+     <height>29</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1028,8 +1028,9 @@
      <property name="title">
       <string>pandapower networks</string>
      </property>
-     <addaction name="actionMV_oberrhein"/>
-     <addaction name="actionCase9"/>
+     <addaction name="actionCigre_lv"/>
+     <addaction name="actionCigre_mv"/>
+     <addaction name="actionCigre_hv"/>
     </widget>
     <addaction name="actionNew_Network"/>
     <addaction name="actionLoad"/>
@@ -1104,14 +1105,14 @@
     <string>Save as..</string>
    </property>
   </action>
-  <action name="actionMV_oberrhein">
+  <action name="actionCigre_lv">
    <property name="text">
-    <string>mv_oberrhein</string>
+    <string>cigre lv network</string>
    </property>
   </action>
-  <action name="actionCase9">
+  <action name="actionCigre_mv">
    <property name="text">
-    <string>case9</string>
+    <string>cigre mv network</string>
    </property>
   </action>
   <action name="actionrunpp">
@@ -1173,6 +1174,11 @@
    </property>
    <property name="toolTip">
     <string>simple plot a network</string>
+   </property>
+  </action>
+  <action name="actionCigre_hv">
+   <property name="text">
+    <string>cigre hv network</string>
    </property>
   </action>
  </widget>

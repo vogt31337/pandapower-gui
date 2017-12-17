@@ -125,9 +125,9 @@ class mainWindow(QMainWindow):
         self.actionLoad.triggered.connect(self.mainLoadClicked)
         self.actionSave.triggered.connect(self.mainSaveClicked)
         self.actionQuit.triggered.connect(self.mainQuitClicked)
-
-#        self.actionMV_oberrhein.triggered.connect(partial(self.load_pandapower_network, pnw.mv_oberrhein, "MV Oberrhein"))
-#        self.actionCase9.triggered.connect(partial(self.load_pandapower_network, pnw.case9, "IEEE Case 9"))
+        self.actionCigre_lv.triggered.connect(self.mainExampleClicked)
+        self.actionCigre_mv.triggered.connect(self.mainExampleClicked)
+        self.actionCigre_hv.triggered.connect(self.mainExampleClicked)
 
         self.actionAbout.triggered.connect(self.show_license)
         self.actionDocumentation.triggered.connect(self.show_docs)
@@ -265,6 +265,20 @@ class mainWindow(QMainWindow):
             self.mainSaveClicked()
         else:
             pass
+
+    def mainExampleClicked(self):
+        if self.actionCigre_lv.triggered:
+            self.load_network(net=pnw.create_cigre_network_lv(), name="Cigre LV Network")
+            print("Cigre LV")
+            self.actionCigre_lv.triggered = False
+        elif self.actionCigre_mv.triggered:
+            self.load_network(net=pnw.create_cigre_network_mv(with_der="all"), name="Cigre MV Network")
+            print("Cigre MV")
+            self.actionCigre_mv.triggered = False
+        elif self.actionCigre_hv.triggered:
+            self.load_network(net=pnw.create_cigre_network_hv(length_km_6a_6b=0.1), name="Cigre HV Network")
+            print("Cigre HV")
+            self.actionCigre_hv.triggered = False
 
     def runpp(self):
         try:
