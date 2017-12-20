@@ -67,7 +67,7 @@ class QIPythonWidget(RichJupyterWidget):
         kernel_client.start_channels()
 
         def stop():
-            "stop"
+            """stop"""
             kernel_client.stop_channels()
             kernel_manager.shutdown_kernel()
             guisupport.get_app_qt4().exit()
@@ -491,11 +491,11 @@ class mainWindow(QMainWindow):
 
     def res_dcline_clicked(self):
         self.res_message.setHtml(str(self.net.res_dcline.to_html()))
-        
-        
+
+
     # plot networks
    # def plot_network(self):
-        
+
 
     # interpreter
     def runPandapowerTests(self):
