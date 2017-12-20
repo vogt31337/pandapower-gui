@@ -50,14 +50,15 @@ from IPython.lib import guisupport
 
 _GUI_VERSION = "dev 0"
 
+
 class QIPythonWidget(RichJupyterWidget):
-    """
-        Convenience class for a live IPython console widget.
-        We can replace the standard banner using the customBanner argument
+    """Convenience class for a live IPython console widget.
+
+    We can replace the standard banner using the customBanner argument
     """
 
     def __init__(self, customBanner=None, *args, **kwargs):
-        if customBanner != None:
+        if customBanner:
             self.banner = customBanner
         super(QIPythonWidget, self).__init__(*args, **kwargs)
         self.kernel_manager = kernel_manager = QtInProcessKernelManager()
@@ -74,25 +75,27 @@ class QIPythonWidget(RichJupyterWidget):
         self.exit_requested.connect(stop)
 
     def pushVariables(self, variableDict):
-        """ Given a dictionary containing name /
-            value pairs, push those variables to the IPython console widget
+        """Given a dictionary containing name /
+        value pairs, push those variables to the IPython console widget
         """
         self.kernel_manager.kernel.shell.push(variableDict)
 
     def clearTerminal(self):
-        """ Clears the terminal """
+        """Clear the terminal."""
         self._control.clear()
 
     def printText(self, text):
-        """ Prints some plain text to the console """
+        """Print some plain text to the console."""
         self._append_plain_text(text)
 
     def executeCommand(self, command):
-        """ Execute a command in the frame of the console widget """
+        """Execute a command in the frame of the console widget."""
         self._execute(command, False)
 
+
 class mainWindow(QMainWindow):
-    """ Create main window """
+    """Create main window."""
+
     def __init__(self):
         super(mainWindow, self).__init__()
         uic.loadUi('resources/ui/main_develop.ui', self)
@@ -102,7 +105,7 @@ class mainWindow(QMainWindow):
                               "\nQt vesrion: " +
                               QT_VERSION +
                               "\nGUI version: " +
-                              _GUI_VERSION  + "\n" +
+                              _GUI_VERSION + "\n" +
                               "\nNetwork variable stored in : net")
         self.embedIpythonInterpreter()  # embed the ipython
         self.embedPlot()    # plot net layout in plot_vbox
@@ -117,7 +120,7 @@ class mainWindow(QMainWindow):
         self.ax.autoscale_view(True, True, True)
 
         self.collectionsDoubleClick = False
-        self.tabWidget.setCurrentIndex(0) #set firtst tab
+        self.tabWidget.setCurrentIndex(0)  # set firtst tab
 
         # menubar
 #        self.actionNew_Network.triggered.connect(self.mainEmptyClicked)
@@ -140,11 +143,11 @@ class mainWindow(QMainWindow):
         self.actionrunppOptions.triggered.connect(self.runpp_options)
         self.actionrunppOptions.setIcon(QIcon('resources/icons/runpp_options.png'))
         # run shortcircuit
-#        self.actionSC.triggered.connect(self.runsc)
+        # self.actionSC.triggered.connect(self.runsc)
         self.actionSC.setIcon(QIcon('resources/icons/shortcircuit.png'))
         self.actionSC.triggered.connect(self.runsc_options)
         # plot networks
-       # self.actionPlot.triggered.connect(self.plot_network)
+        # self.actionPlot.triggered.connect(self.plot_network)
 
         # show initialised and updated element tables
         self.tabWidget_inspect.setCurrentIndex(0)
@@ -161,7 +164,7 @@ class mainWindow(QMainWindow):
         self.tabWidget_result.currentChanged.connect(self.show_result_table)
         # self.tabWidget_result.currentChanged.connect(self.set_table_tabs_inactive)
 
-        #interpreter
+        # interpreter
         self.runTests.clicked.connect(self.runPandapowerTests)
 
         self.show()
@@ -181,16 +184,16 @@ class mainWindow(QMainWindow):
         self.docs.show()
 
     def printLineSeperator(self, ch="=", n=40):
-        """ prints some characters """
+        """Print some characters."""
         return ch*n+"\n"
 
     def mainPrintMessage(self, message):
-        #self.main_message.append(self.printLineSeperator())
+        # self.main_message.append(self.printLineSeperator())
         self.main_message.append(message)
         self.main_message.append(self.printLineSeperator())
 
     def embedIpythonInterpreter(self):
-        """ embed an IPyton QT Console Interpreter """
+        """Embed an IPyton QT Console Interpreter."""
         self.ipyConsole = QIPythonWidget(
             customBanner="""Welcome to the console\nType \
                             whos to get list of variables \
@@ -225,11 +228,11 @@ class mainWindow(QMainWindow):
 
     def load_network(self, net, name):
         self.net = net
-        if not "_runpp_options" in self.net:
+        if "_runpp_options" not in self.net:
             self.net._runpp_options = dict()
-#        self.ipyConsole.executeCommand("del(net)")
-        #self.ipyConsole.clearTerminal()
-        if not "_runsc_options" in self.net:
+        # self.ipyConsole.executeCommand("del(net)")
+        # self.ipyConsole.clearTerminal()
+        if "_runsc_options" not in self.net:
             self.net._runsc_options = dict()
         self.ipyConsole.printText("\n\n"+"-"*40)
         self.ipyConsole.printText("\nNew net loaded \n")
@@ -243,12 +246,12 @@ class mainWindow(QMainWindow):
         self.element_table.clear()
 
     def mainSaveClicked(self):
-        #filename = QFileDialog.getOpenFileName()
+        # filename = QFileDialog.getOpenFileName()
         filename = QFileDialog.getSaveFileName(self, 'Save net')
         print(filename[0])
         try:
             pp.to_excel(self.net, filename[0])
-            self.mainPrintMessage("Saved case to: "+ filename[0])
+            self.mainPrintMessage("Saved case to: " + filename[0])
         except:
             self.mainPrintMessage("Case not saved, maybe empty?")
 
@@ -289,7 +292,6 @@ class mainWindow(QMainWindow):
         except:
             self.mainPrintMessage("Error occured - empty network?")
 
-
     def runpp_options(self):
         try:
             runppOptions(self.net, parent=self)
@@ -305,7 +307,7 @@ class mainWindow(QMainWindow):
             print(e)
 
     def lossesSummary(self):
-        """ print the losses in each element that has losses """
+        """Print the losses in each element that has losses."""
         # get total losses
         self.mainPrintMessage("Losses report generated:")
         losses = 0.0
@@ -337,7 +339,7 @@ class mainWindow(QMainWindow):
     def runsc(self):
         try:
             sc.calc_sc(self.net, **self.net._runsc_options)
- #           self.mainPrintMessage(str(self.net))
+            # self.mainPrintMessage(str(self.net))
         except pp.LoadflowNotConverged:
             self.mainPrintMessage("Power Flow did not Converge!")
         except:
@@ -364,12 +366,12 @@ class mainWindow(QMainWindow):
 
     def get_result_sc_index(self):
         index = self.tabWidget_result_sc.currentIndex()
-        tab_list = {0: 'res_bus_sc', 1: 'res_line_sc', 2: 'res_load_sc', 3: 'res_sgen_sc', 4: 'res_ext_grid_sc',
-                    5: 'res_trafo_sc', 6: 'res_trafo3w_sc', 7: 'res_gen_sc', 8: 'res_shunt_sc', 9: 'res_ward_sc',
-                    10: 'res_xward_sc', 11: 'res_dcline_sc'}
-#        tab_list = {0: 'res_bus', 1: 'res_line', 2: 'res_load', 3: 'res_sgen', 4: 'res_ext_grid',
-#                   5: 'res_trafo', 6: 'res_trafo3w', 7: 'res_gen', 8: 'res_shunt', 9: 'res_ward',
-#                    10: 'res_xward', 11: 'res_dcline'}
+        tab_list = {0: 'res_bus_sc', 1: 'res_line_sc', 2: 'res_load_sc', 3: 'res_sgen_sc',
+                    4: 'res_ext_grid_sc', 5: 'res_trafo_sc', 6: 'res_trafo3w_sc', 7: 'res_gen_sc',
+                    8: 'res_shunt_sc', 9: 'res_ward_sc', 10: 'res_xward_sc', 11: 'res_dcline_sc'}
+        # tab_list = {0: 'res_bus', 1: 'res_line', 2: 'res_load', 3: 'res_sgen', 4: 'res_ext_grid',
+        #           5: 'res_trafo', 6: 'res_trafo3w', 7: 'res_gen', 8: 'res_shunt', 9: 'res_ward',
+        #            10: 'res_xward', 11: 'res_dcline'}
         element = tab_list[index]
         return element
 
@@ -400,9 +402,7 @@ class mainWindow(QMainWindow):
         table_widget.doubleClicked.connect(partial(self.table_doubleclicked, element, table_widget))
 
     def set_table_tabs_inactive(self):
-        """
-        Sets the tabs for selecting the tables inactive for all elements that are empty in net
-        """
+        """Set the tabs for selecting the tables inactive for all elements that are empty in net."""
         par = []
         res = []
         res_sc = []
@@ -435,9 +435,9 @@ class mainWindow(QMainWindow):
             else:
                 self.tabWidget_result.setTabEnabled(res_tab_list[result], False)
         res_tab_sc_list = {
-            'res_bus_sc': 0, 'res_dcline_sc': 11, 'res_ext_grid_sc': 4, 'res_gen_sc': 7, 'res_line_sc': 1,
-            'res_load_sc': 2, 'res_sgen_sc': 3, 'res_shunt_sc': 8, 'res_trafo_sc': 5, 'res_trafo3w_sc': 6,
-            'res_ward_sc': 9, 'res_xward_sc': 10}
+            'res_bus_sc': 0, 'res_dcline_sc': 11, 'res_ext_grid_sc': 4, 'res_gen_sc': 7,
+            'res_line_sc': 1, 'res_load_sc': 2, 'res_sgen_sc': 3, 'res_shunt_sc': 8,
+            'res_trafo_sc': 5, 'res_trafo3w_sc': 6, 'res_ward_sc': 9, 'res_xward_sc': 10}
         for result_sc in res_tab_sc_list.keys():
             if result_sc in res_sc:
                 self.tabWidget_result_sc.setTabEnabled(res_tab_sc_list[result_sc], True)
@@ -492,10 +492,8 @@ class mainWindow(QMainWindow):
     def res_dcline_clicked(self):
         self.res_message.setHtml(str(self.net.res_dcline.to_html()))
 
-
     # plot networks
-   # def plot_network(self):
-
+    # def plot_network(self):
 
     # interpreter
     def runPandapowerTests(self):
@@ -596,10 +594,10 @@ class mainWindow(QMainWindow):
         self.fig = plt.Figure()
         self.canvas = FigureCanvas(self.fig)
         self.ax = self.fig.add_subplot(111)
-#        self.ax.set_axis_bgcolor("white")
+        # self.ax.set_axis_bgcolor("white")
         # when a button is pressed on the canvas?
         self.canvas.mpl_connect('button_press_event', self.onCollectionsClick)
-        #self.canvas.mpl_connect('button_release_event', self.onCollectionsClick)
+        # self.canvas.mpl_connect('button_release_event', self.onCollectionsClick)
         self.canvas.mpl_connect('pick_event', self.onCollectionsPick)
         mpl_toolbar = NavigationToolbar(self.canvas, self.main_build_frame)
         self.gridLayout.addWidget(self.canvas)
@@ -615,9 +613,9 @@ class mainWindow(QMainWindow):
         if self.create_bus.isChecked():
             geodata = (event.xdata, event.ydata)
             try:
-                self.bus_window = BusWindow(self.net
-                                            , self.updateBusCollection
-                                            , geodata=geodata)
+                self.bus_window = BusWindow(self.net,
+                                            self.updateBusCollection,
+                                            geodata=geodata)
             except Exception as inst:
                 print(inst)
 
@@ -634,7 +632,7 @@ class mainWindow(QMainWindow):
         print("====", collection)
         print("single")
         if self.collectionsDoubleClick:
-            #ignore second click of collectionsDoubleClick
+            # ignore second click of collectionsDoubleClick
             if self.last == "doublecklicked":
                 self.last = "clicked"
             else:
@@ -644,43 +642,43 @@ class mainWindow(QMainWindow):
         else:
             self.collectionsSingleClickActions(event, element, index)
 
-
     def open_element_window(self, element, index):
         if element == "bus":
             print("will build bus")
-            self.element_window = BusWindow(self.net
-                                        , self.updateBusCollection
-                                        , index=index)
+            self.element_window = BusWindow(self.net,
+                                            self.updateBusCollection,
+                                            index=index)
         elif element == "line":
             print("will bild line")
             print(index)
             self.element_window = LineWindow(self.net,
-                                              self.updateLineCollection,
-                                              index=index)
+                                             self.updateLineCollection,
+                                             index=index)
         elif element == "load":
             self.element_window = LoadWindow(self.net,
-                                              self.updateLoadCollections,
-                                              index=index)
+                                             self.updateLoadCollections,
+                                             index=index)
         elif element == "gen":
             self.element_window = GenWindow(self.net,
-                                              self.updateGenCollections,
-                                              index=index)
+                                            self.updateGenCollections,
+                                            index=index)
         elif element == "ext_grid":
             self.element_window = ExtGridWindow(self.net,
-                                              self.updateExtGridCollections,
-                                              index=index)
+                                                self.updateExtGridCollections,
+                                                index=index)
         elif element == "trafo":
             print("trafo doubleclicked")
 
     def collectionsSingleClickActions(self, event, element, index):
-        #what to do when single clicking on an element
+        # what to do when single clicking on an element
         if element != "bus":
             return
         if self.create_line.isChecked():
             if self.lastBusSelected is None:
                 self.lastBusSelected = index
             elif self.lastBusSelected != index:
-                #pp.create_line(self.net, self.lastBusSelected, index, length_km=1.0, std_type="NAYY 4x50 SE")
+                # pp.create_line(self.net, self.lastBusSelected, index, length_km=1.0,
+                #                std_type="NAYY 4x50 SE")
                 self.build_message.setText(str(self.lastBusSelected)+"-"+str(index))
                 self.line_window = LineWindow(self.net,
                                               self.updateLineCollection,
@@ -691,7 +689,8 @@ class mainWindow(QMainWindow):
             if self.lastBusSelected is None:
                 self.lastBusSelected = index
             elif self.lastBusSelected != index:
-                pp.create_transformer(self.net, self.lastBusSelected, index, std_type="0.25 MVA 10/0.4 kV")
+                pp.create_transformer(self.net, self.lastBusSelected, index,
+                                      std_type="0.25 MVA 10/0.4 kV")
                 self.lastBusSelected = None
                 self.updateTrafoCollections()
                 self.drawCollections()
@@ -706,8 +705,8 @@ class mainWindow(QMainWindow):
         elif self.create_gen.isChecked():
             try:
                 self.gen_window = GenWindow(self.net,
-                                              self.updateGenCollections,
-                                              bus=index)
+                                            self.updateGenCollections,
+                                            bus=index)
             except Exception as e:
                 print(e)
             self.lastBusSelected = None
@@ -754,6 +753,7 @@ class runscOptions(QDialog):
         if run:
             self.parent().runsc()
         self.close()
+
 
 class runppOptions(QDialog):
     def __init__(self, net, parent=None):
@@ -804,8 +804,9 @@ class runppOptions(QDialog):
             self.parent().runpp()
         self.close()
 
+
 def displaySplashScreen(n=2):
-    """ Create and display the splash screen """
+    """Create and display the splash screen."""
     splash_pix = QPixmap('resources/icons/panda-power.png')
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setMask(splash_pix.mask())
@@ -821,11 +822,11 @@ def createSampleNetwork():
     b2 = pp.create_bus(net, vn_kv=0.4, name="MV", geodata=(5, 28))
     b3 = pp.create_bus(net, vn_kv=0.4, name="Load Bus", geodata=(5, 22))
 
-    #create bus elements
+    # create bus elements
     pp.create_ext_grid(net, bus=b1, vm_pu=1.02, s_sc_max_mva=2, rx_max=0.1, name="Grid Connection")
     pp.create_load(net, bus=b3, p_kw=100, q_kvar=50, name="Load")
 
-    #create branch elements
+    # create branch elements
     tid = pp.create_transformer(net, hv_bus=b1, lv_bus=b2, std_type="0.4 MVA 20/0.4 kV",
                                 name="Trafo")
     pp.create_line(net, from_bus=b2, to_bus=b3, length_km=0.1, name="Line",
