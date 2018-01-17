@@ -1,37 +1,68 @@
-# -*- coding: utf-8 -*-
+"""-*- coding: utf-8 -*-.
 
-# Copyright (c) Tobie Nortje, Leon Thurner
-# All rights reserved. Use of this source code is governed
-# by a BSD-style license that can be found in the LICENSE file.
-# File created by Tobie Nortje ---
+Copyright (c) Tobie Nortje, Leon Thurner, Jonas Haack
+All rights reserved. Use of this source code is governed
+by a BSD-style license that can be found in the LICENSE file.
+File created by Tobie Nortje ---
+"""
 
-
-#general
+# general
 import sys
 import time
-import pandas as pd
+
 from functools import partial
+import pandas as pd
 
-#pandapower
+# pandapower
 import pandapower as pp
-import pandapower.shortcircuit as sc
 import pandapower.networks as pnw
+import pandapower.shortcircuit as sc
 
-#pandapower gui
-from element_windows import *
+# pandapower gui
+from element_windows import BusWindow
+from element_windows import ExtGridWindow
+from element_windows import GenWindow
+from element_windows import LineWindow
+from element_windows import LoadWindow
+
+try:
+    import pplog as logging
+except ImportError:
+    import logging
+
+logger = logging.getLogger(__name__)
 
 #qt
 try:
     from PyQt5 import uic
-    from PyQt5 import *
-    from PyQt5.QtGui import *
-    from PyQt5.QtWidgets import *
-    from PyQt5.QtCore import *
-    from PyQt5.QtWebKitWidgets import QWebView
+
+    from PyQt5.QtCore import Qt
+    from PyQt5.QtCore import QTimer
+    from PyQt5.QtCore import QUrl
+
+    from PyQt5.QtGui import QIcon
+    from PyQt5.QtGui import QPixmap
+
+    # from PyQt5.QtWebEngineWidgets import QWebView #  FIXME: where is QWebView in PyQt5?
+
+    # from PyQt5 import QtWidgets
+    from PyQt5.QtWidgets import QApplication
+    from PyQt5.QtWidgets import QDialog
+    from PyQt5.QtWidgets import QFileDialog
+    from PyQt5.QtWidgets import QMainWindow
+    from PyQt5.QtWidgets import QMessageBox
+    from PyQt5.QtWidgets import QSizePolicy
+    from PyQt5.QtWidgets import QSplashScreen
+    from PyQt5.QtWidgets import QTableWidgetItem
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.QtWidgets import QWidget
+
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
     from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
     QT_VERSION = "5"
+    logger.info("PyQt {} loaded".format(QT_VERSION))
 except ImportError:
+    # FIXME: adapt imports to new classes
     from qtpy import uic
     from qtpy import *
     from qtpy.QtCore import *
@@ -40,12 +71,15 @@ except ImportError:
     from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
     from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
     QT_VERSION = "4"
+    logger.info("PyQt {} loaded".format(QT_VERSION))
+
+import matplotlib.pyplot as plt
 
 import pandapower.plotting as plot
-import matplotlib.pyplot as plt
 
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
+
 from IPython.lib import guisupport
 
 _GUI_VERSION = "dev 0"
@@ -93,6 +127,35 @@ class QIPythonWidget(RichJupyterWidget):
         self._execute(command, False)
 
 
+class MplCanvas(FigureCanvas):
+    """Matplotlib canvas class to create figures."""
+
+    def __init__(self):
+        """Initialize."""
+        self.fig = plt.Figure()
+        self.ax = self.fig.add_subplot(111)
+        FigureCanvas.__init__(self, self.fig)
+        FigureCanvas.setSizePolicy(
+            self, QSizePolicy.Expanding, QSizePolicy.Expanding)
+        FigureCanvas.updateGeometry(self)
+
+
+class MplWidget(QWidget):
+    """Matplotlib widget."""
+
+    def __init__(self, parent=None):
+        """Initialize."""
+        QWidget.__init__(self, parent)   # Inherit from QWidget
+        self.canvas = MplCanvas()                  # Create canvas object
+        self.vbl = QVBoxLayout()         # Set box for plotting
+
+    def add_toolbar(self, mpl_toolbar):
+        """Add a toolbar below the plot."""
+        # mpl_toolbar = NavigationToolbar(self, place)
+        self.vbl.addWidget(self.canvas)
+        self.vbl.addWidget(mpl_toolbar)
+        self.setLayout(self.vbl)
+
 class mainWindow(QMainWindow):
     """Create main window."""
 
@@ -107,23 +170,36 @@ class mainWindow(QMainWindow):
                               "\nGUI version: " +
                               _GUI_VERSION + "\n" +
                               "\nNetwork variable stored in : net")
+
         self.embedIpythonInterpreter()  # embed the ipython
-        self.embedPlot()    # plot net layout in plot_vbox
+
         # collections builder setup
         self.lastBusSelected = None
-        self.embedCollectionsBuilder()  # plot the network in main_build_frame
+        self.embedCollectionsBuilder()  # plot the network in widget_1
         self.load_network(net=createSampleNetwork(), name="GUI Example Network")
         self.initialiseCollectionsPlot()
-        self.ax.xaxis.set_visible(False)
-        self.ax.yaxis.set_visible(False)
-        self.ax.set_aspect('equal', 'datalim')
-        self.ax.autoscale_view(True, True, True)
-
+        self.network_graph.canvas.ax.xaxis.set_visible(False)
+        self.network_graph.canvas.ax.yaxis.set_visible(False)
+        self.network_graph.canvas.ax.set_aspect('equal', 'datalim')
+        self.network_graph.canvas.ax.autoscale_view(True, True, True)
         self.collectionsDoubleClick = False
+
+        # result collections builder setup
+        self.lastBusSelected = None
+        self.embedResultCollectionsBuilder()  # plot the network in widget_2
+        self.load_network(net=createSampleNetwork(), name="GUI Example Network")
+        self.initialiseResultCollectionsPlot()
+        self.result_plot.canvas.ax.xaxis.set_visible(False)
+        self.result_plot.canvas.ax.yaxis.set_visible(False)
+        self.result_plot.canvas.ax.set_aspect('equal', 'datalim')
+        self.result_plot.canvas.ax.autoscale_view(True, True, True)
+        self.collectionsDoubleClick = False
+
+
         self.tabWidget.setCurrentIndex(0)  # set firtst tab
 
         # menubar
-#        self.actionNew_Network.triggered.connect(self.mainEmptyClicked)
+        # self.actionNew_Network.triggered.connect(self.mainEmptyClicked)
         self.actionNew_Network.triggered.connect(self.clearMainCollectionBuilder)
         self.actionLoad.triggered.connect(self.mainLoadClicked)
         self.actionSave.triggered.connect(self.mainSaveClicked)
@@ -142,6 +218,7 @@ class mainWindow(QMainWindow):
 
         self.actionrunppOptions.triggered.connect(self.runpp_options)
         self.actionrunppOptions.setIcon(QIcon('resources/icons/runpp_options.png'))
+
         # run shortcircuit
         # self.actionSC.triggered.connect(self.runsc)
         self.actionSC.setIcon(QIcon('resources/icons/shortcircuit.png'))
@@ -201,11 +278,6 @@ class mainWindow(QMainWindow):
 
         self.interpreter_vbox.addWidget(self.ipyConsole)
         self.ipyConsole.pushVariables({"pp": pp, "sc": sc})
-
-    def embedPlot(self):
-        from pp_plot_widget import MainWindow
-        self.net_plot = MainWindow()
-        self.plot_vbox.addWidget(self.net_plot)
 
     def mainLoadClicked(self):
         file_to_open = ""
@@ -518,14 +590,41 @@ class mainWindow(QMainWindow):
         print(self.collections)
         self.drawCollections()
 
+    # Result collections
+    def initialiseResultCollectionsPlot(self):
+        print("Inialise Collections")
+        self.xmin = self.net.bus_geodata.x.min()
+        self.xmax = self.net.bus_geodata.x.max()
+        self.ymin = self.net.bus_geodata.y.min()
+        self.ymax = self.net.bus_geodata.y.max()
+        self.scale = max((self.xmax - self.xmin), (self.ymax - self.ymin))
+        self.collections = {}
+        self.updateBusCollection()
+        self.updateLineCollection()
+        self.updateTrafoCollections()
+        self.updateLoadCollections()
+        self.updateExtGridCollections()
+        print(self.collections)
+        self.drawResultCollections()
+
     def drawCollections(self):
-        self.ax.clear()
+        self.network_graph.canvas.ax.clear()
         for name, c in self.collections.items():
             if c is not None:
-                self.ax.add_collection(c)
-        self.ax.set_xlim((self.xmin*0.98, self.xmax*1.02))
-        self.ax.set_ylim((self.ymin*0.98, self.ymax*1.02))
-        self.canvas.draw()
+                self.network_graph.canvas.ax.add_collection(c)
+        self.network_graph.canvas.ax.set_xlim((self.xmin*0.98, self.xmax*1.02))
+        self.network_graph.canvas.ax.set_ylim((self.ymin*0.98, self.ymax*1.02))
+        self.network_graph.canvas.draw()
+        print("Drew Collections")
+
+    def drawResultCollections(self):
+        self.result_plot.canvas.ax.clear()
+        for name, c in self.collections.items():
+            if c is not None:
+                self.result_plot.canvas.ax.add_collection(c)
+        self.result_plot.canvas.ax.set_xlim((self.xmin*0.98, self.xmax*1.02))
+        self.result_plot.canvas.ax.set_ylim((self.ymin*0.98, self.ymax*1.02))
+        self.result_plot.canvas.draw()
         print("Drew Collections")
 
     def updateBusCollection(self, redraw=False):
@@ -580,29 +679,55 @@ class mainWindow(QMainWindow):
         if redraw:
             self.drawCollections()
 
-    # clear the figure in main_build_frame
+    # clear the figure in widget_1
     def clearMainCollectionBuilder(self):
-        self.ax.clear()
+        self.network_graph.canvas.ax.clear()
         print("figure cleared")
         self.net = pp.create_empty_network()
         self.collections = {}
         self.drawCollections()
 
-    # show the network plot in main_build_frame
+    # show the network plot in widget_1
     def embedCollectionsBuilder(self):
         self.dpi = 100
-        self.fig = plt.Figure()
-        self.canvas = FigureCanvas(self.fig)
-        self.ax = self.fig.add_subplot(111)
+        self.network_graph = MplWidget(self.widget_1)
+        # self.fig = plt.Figure()
+        # self.canvas = FigureCanvas(self.fig)
+        # self.ax = self.fig.add_subplot(111)
         # self.ax.set_axis_bgcolor("white")
         # when a button is pressed on the canvas?
-        self.canvas.mpl_connect('button_press_event', self.onCollectionsClick)
+        self.network_graph.canvas.mpl_connect('button_press_event', self.onCollectionsClick)
         # self.canvas.mpl_connect('button_release_event', self.onCollectionsClick)
-        self.canvas.mpl_connect('pick_event', self.onCollectionsPick)
-        mpl_toolbar = NavigationToolbar(self.canvas, self.main_build_frame)
-        self.gridLayout.addWidget(self.canvas)
-        self.gridLayout.addWidget(mpl_toolbar)
-        self.fig.subplots_adjust(
+        self.network_graph.canvas.mpl_connect('pick_event', self.onCollectionsPick)
+
+        mpl_toolbar = NavigationToolbar(self.network_graph.canvas, self.widget_1)
+        # self.gridLayout.addWidget(self.network_graph.canvas)
+        # self.gridLayout.addWidget(mpl_toolbar)
+        self.network_graph.add_toolbar(mpl_toolbar)
+
+        self.network_graph.canvas.fig.subplots_adjust(
+            left=0.0, right=1, top=1, bottom=0, wspace=0.02, hspace=0.04)
+        self.dragged = None
+
+    # show the result plot in widget_2
+    def embedResultCollectionsBuilder(self):
+        self.dpi = 100
+        self.result_plot = MplWidget(self.widget_2)
+        # self.fig = plt.Figure()
+        # self.canvas = FigureCanvas(self.fig)
+        # self.ax = self.fig.add_subplot(111)
+        self.result_plot.canvas.ax.set_axis_bgcolor("red")
+        # when a button is pressed on the canvas?
+        self.result_plot.canvas.mpl_connect('button_press_event', self.onCollectionsClick)
+        # self.canvas.mpl_connect('button_release_event', self.onCollectionsClick)
+        self.result_plot.canvas.mpl_connect('pick_event', self.onCollectionsPick)
+
+        mpl_toolbar = NavigationToolbar(self.result_plot.canvas, self.widget_2)
+        # self.gridLayout.addWidget(self.result_plot.canvas)
+        # self.gridLayout.addWidget(mpl_toolbar)
+        self.result_plot.add_toolbar(mpl_toolbar)
+
+        self.result_plot.canvas.fig.subplots_adjust(
             left=0.0, right=1, top=1, bottom=0, wspace=0.02, hspace=0.04)
         self.dragged = None
 
