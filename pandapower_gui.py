@@ -16,7 +16,7 @@ import pandas as pd
 # pandapower
 import pandapower as pp
 import pandapower.networks as pnw
-import pandapower.plotting as pplot
+# import pandapower.plotting as pplot
 import pandapower.shortcircuit as sc
 
 # pandapower gui
@@ -147,8 +147,12 @@ class MplWidget(QWidget):
     def __init__(self, parent=None):
         """Initialize."""
         QWidget.__init__(self, parent)   # Inherit from QWidget
-        self.canvas = MplCanvas()                  # Create canvas object
+        self.canvas = MplCanvas()        # Create canvas object
         self.vbl = QVBoxLayout()         # Set box for plotting
+
+    def update_canvas(self):
+        """Update the Figure (including the colorbar)."""
+        pass
 
     def add_toolbar(self, mpl_toolbar):
         """Add a toolbar below the plot."""
@@ -189,7 +193,9 @@ class mainWindow(QMainWindow):
         self.network_graph.canvas.ax.set_aspect('equal', 'datalim')
         self.network_graph.canvas.ax.autoscale_view(True, True, True)
 
-        self.initialiseResultCollectionsPlot()
+        # TODO(__init__): move results plot initialization to after the first runppOptions
+        # TODO(__init__): add differnent visualisation options in the results plot tab
+        # self.initialiseResultCollectionsPlot()
         self.result_plot.canvas.ax.xaxis.set_visible(False)
         self.result_plot.canvas.ax.yaxis.set_visible(False)
         self.result_plot.canvas.ax.set_aspect('equal', 'datalim')
@@ -197,7 +203,7 @@ class mainWindow(QMainWindow):
 
         self.collectionsDoubleClick = False
 
-        self.tabWidget.setCurrentIndex(0)  # set firtst tab
+        self.tabWidget.setCurrentIndex(5)  # set firtst tab
 
         # menubar
         # self.actionNew_Network.triggered.connect(self.mainEmptyClicked)
@@ -300,9 +306,6 @@ class mainWindow(QMainWindow):
             self.load_network(net)
 
     def load_network(self, net, name):
-        # NOTE(load_network): initial loadflow for development of the ResultsCollectionPlot
-        # TODO(load_network): remove initail laoflow and build results plot only when triggered
-        pp.runpp(net)
         self.net = net
         if "_runpp_options" not in self.net:
             self.net._runpp_options = dict()
@@ -315,8 +318,8 @@ class mainWindow(QMainWindow):
         self.ipyConsole.printText("-"*40+"\n\n")
         self.ipyConsole.pushVariables({"net": self.net})
         self.ipyConsole.executeCommand("net")
+        self.initialiseCollectionsPlot()
         # NOTE(load_network): exluding intialisation=no update of the collection when loading a net
-        # self.initialiseCollectionsPlot()
         # self.initialiseResultCollectionsPlot()
         self.mainPrintMessage(name + " loaded")
         self.mainPrintMessage(str(self.net))
@@ -362,9 +365,11 @@ class mainWindow(QMainWindow):
             self.actionCigre_hv.triggered = False
 
     def runpp(self):
+        """Run pandpapower loadflow and trigger results output plot."""
         try:
             pp.runpp(self.net, **self.net._runpp_options)
             self.mainPrintMessage(str(self.net))
+            self.initialiseResultCollectionsPlot()
         except pp.LoadflowNotConverged:
             self.mainPrintMessage("Power Flow did not Converge!")
         except:
@@ -578,7 +583,7 @@ class mainWindow(QMainWindow):
 
     # collections
     def initialiseCollectionsPlot(self):
-        logger.info("Inialise Collections")
+        logger.info("Inialise Network Collections")
         self.xmin = self.net.bus_geodata.x.min()
         self.xmax = self.net.bus_geodata.x.max()
         self.ymin = self.net.bus_geodata.y.min()
@@ -611,23 +616,28 @@ class mainWindow(QMainWindow):
         self.network_graph.canvas.ax.set_xlim((self.xmin*0.98, self.xmax*1.02))
         self.network_graph.canvas.ax.set_ylim((self.ymin*0.98, self.ymax*1.02))
         self.network_graph.canvas.draw()
-        logger.info("Drew Collections")
+        logger.info("Drew Network Collections")
 
     def drawResultCollections(self, plot_colorbars=True):
+        self.result_plot.canvas.ax.clear()
+        self.result_plot.canvas.cbar_load = {}
         for name, c in self.result_collections.items():
+            print(name)
             if c:
                 self.result_plot.canvas.ax.add_collection(c)
                 if plot_colorbars and hasattr(c, "has_colormap") and c.has_colormap:
                     extend = c.extend if hasattr(c, "extend") else "neither"
-                    cbar_load = plt.colorbar(
+                    self.result_plot.canvas.cbar_load[name] = plt.colorbar(
                         c, extend=extend, ax=self.result_plot.canvas.ax,
                         shrink=0.9)  # TODO(drawResultCollections): reset shrinking factor
-                    if hasattr(c, "cbar_title"):
-                        cbar_load.ax.set_ylabel(c.cbar_title)
-
         self.result_plot.canvas.ax.set_xlim((self.xmin*0.98, self.xmax*1.02))
         self.result_plot.canvas.ax.set_ylim((self.ymin*0.98, self.ymax*1.02))
         self.result_plot.canvas.draw()
+
+        for name in self.result_collections.keys():
+            self.result_plot.canvas.cbar_load[name].remove()
+
+        logger.info("Drew Result Collections")
 
     def updateBusCollection(self, redraw=False):
         bc = plot.create_bus_collection(self.net, size=self.scale*0.01,
