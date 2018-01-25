@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 try:
     from PyQt5 import uic
 
+    from PyQt5.QtCore import pyqtSlot
     from PyQt5.QtCore import Qt
     from PyQt5.QtCore import QTimer
     from PyQt5.QtCore import QUrl
@@ -90,6 +91,8 @@ class QIPythonWidget(RichJupyterWidget):
     """Convenience class for a live IPython console widget.
 
     We can replace the standard banner using the customBanner argument
+
+    TODO(QIPythonWidget): stream all pandapower events to the console
     """
 
     def __init__(self, customBanner=None, *args, **kwargs):
@@ -110,8 +113,10 @@ class QIPythonWidget(RichJupyterWidget):
         self.exit_requested.connect(stop)
 
     def pushVariables(self, variableDict):
-        """Given a dictionary containing name /
-        value pairs, push those variables to the IPython console widget
+        """Push Variables to the console widget.
+
+        Given a dictionary containing name / value pairs, push those variables to the IPython
+        console widget
         """
         self.kernel_manager.kernel.shell.push(variableDict)
 
@@ -156,7 +161,6 @@ class MplWidget(QWidget):
 
     def add_toolbar(self, mpl_toolbar):
         """Add a toolbar below the plot."""
-        # mpl_toolbar = NavigationToolbar(self, place)
         self.vbl.addWidget(self.canvas)
         self.vbl.addWidget(mpl_toolbar)
         self.setLayout(self.vbl)
@@ -193,13 +197,15 @@ class mainWindow(QMainWindow):
         self.network_graph.canvas.ax.set_aspect('equal', 'datalim')
         self.network_graph.canvas.ax.autoscale_view(True, True, True)
 
-        # TODO(__init__): move results plot initialization to after the first runppOptions
-        # TODO(__init__): add differnent visualisation options in the results plot tab
-        # self.initialiseResultCollectionsPlot()
         self.result_plot.canvas.ax.xaxis.set_visible(False)
         self.result_plot.canvas.ax.yaxis.set_visible(False)
         self.result_plot.canvas.ax.set_aspect('equal', 'datalim')
         self.result_plot.canvas.ax.autoscale_view(True, True, True)
+
+        self.pushButton.clicked.connect(self.on_click_standard_plot)
+        self.pushButton_2.clicked.connect(self.on_click_dummy_plot)
+        self.pushButton.setEnabled(False)
+        self.pushButton_2.setEnabled(False)
 
         self.collectionsDoubleClick = False
 
@@ -230,8 +236,6 @@ class mainWindow(QMainWindow):
         # self.actionSC.triggered.connect(self.runsc)
         self.actionSC.setIcon(QIcon('resources/icons/shortcircuit.png'))
         self.actionSC.triggered.connect(self.runsc_options)
-        # plot networks
-        # self.actionPlot.triggered.connect(self.plot_network)
 
         # show initialised and updated element tables
         self.tabWidget_inspect.setCurrentIndex(0)
@@ -287,6 +291,7 @@ class mainWindow(QMainWindow):
         self.ipyConsole.pushVariables({"pp": pp, "sc": sc})
 
     def mainLoadClicked(self):
+        # FIXME(mainLoadClicked): loading net from *.p and *.xlsx fails
         file_to_open = ""
         file_to_open = QFileDialog.getOpenFileName(filter="*.xlsx, *.p")
         if file_to_open[0] != "":
@@ -295,17 +300,18 @@ class mainWindow(QMainWindow):
                 try:
                     net = pp.from_excel(file_to_open[0], convert=True)
                 except:
-                    logger.warn("couldn't open {}".format(fn))
+                    logger.warning("couldn't open {}".format(fn))
                     return
             elif file_to_open[0].endswith(".p"):
                 try:
                     net = pp.from_pickle(file_to_open[0], convert=True)
                 except:
-                    logger.warn("couldn't open {}".format(fn))
+                    logger.warning("couldn't open {}".format(fn))
                     return
             self.load_network(net)
 
     def load_network(self, net, name):
+        """Load a network."""
         self.net = net
         if "_runpp_options" not in self.net:
             self.net._runpp_options = dict()
@@ -319,8 +325,7 @@ class mainWindow(QMainWindow):
         self.ipyConsole.pushVariables({"net": self.net})
         self.ipyConsole.executeCommand("net")
         self.initialiseCollectionsPlot()
-        # NOTE(load_network): exluding intialisation=no update of the collection when loading a net
-        # self.initialiseResultCollectionsPlot()
+        self.clearResultCollectionsPlot()
         self.mainPrintMessage(name + " loaded")
         self.mainPrintMessage(str(self.net))
         self.result_table.clear()
@@ -370,6 +375,8 @@ class mainWindow(QMainWindow):
             pp.runpp(self.net, **self.net._runpp_options)
             self.mainPrintMessage(str(self.net))
             self.initialiseResultCollectionsPlot()
+            self.pushButton.setEnabled(True)
+            self.pushButton_2.setEnabled(True)
         except pp.LoadflowNotConverged:
             self.mainPrintMessage("Power Flow did not Converge!")
         except:
@@ -378,16 +385,16 @@ class mainWindow(QMainWindow):
     def runpp_options(self):
         try:
             runppOptions(self.net, parent=self)
-#            self.options.show()
+            # self.options.show()
         except Exception as e:
-            logger.warn("{}".format(e))
+            logger.warning("{}".format(e))
 
     def runsc_options(self):
         try:
             runscOptions(self.net, parent=self)
             #            self.options.show()
         except Exception as e:
-            logger.warn("{}".format(e))
+            logger.warning("{}".format(e))
 
     def lossesSummary(self):
         """Print the losses in each element that has losses."""
@@ -403,7 +410,7 @@ class mainWindow(QMainWindow):
                         self.main_message.append(i)
                         self.main_message.append(
                             self.net[i]['pl_kw'].to_string())
-                        # logger.warn("{}".format(self.net[i]['pl_kw']))
+                        # logger.warning("{}".format(self.net[i]['pl_kw']))
                         losses += self.net[i]['pl_kw'].sum()
         self.main_message.append("Total Losses (kW)")
         self.main_message.append(str(losses))
@@ -583,6 +590,7 @@ class mainWindow(QMainWindow):
 
     # collections
     def initialiseCollectionsPlot(self):
+        """Initialize network plot."""
         logger.info("Inialise Network Collections")
         self.xmin = self.net.bus_geodata.x.min()
         self.xmax = self.net.bus_geodata.x.max()
@@ -598,46 +606,85 @@ class mainWindow(QMainWindow):
         logger.info(self.collections)
         self.drawCollections()
 
+    def drawCollections(self):
+        """Fill network plot."""
+        self.network_graph.canvas.ax.clear()
+        for name, c in self.collections.items():
+            if c is not None:
+                self.network_graph.canvas.ax.add_collection(c)
+                self.network_graph.canvas.ax.set_xlim((self.xmin*0.98, self.xmax*1.02))
+                self.network_graph.canvas.ax.set_ylim((self.ymin*0.98, self.ymax*1.02))
+                self.network_graph.canvas.draw()
+        logger.info("Drew Network Collections")
+
     # Result collections
-    def initialiseResultCollectionsPlot(self):
+    def initialiseResultCollectionsPlot(self, selection=['bus', 'line']):
+        """Initialize results plot.
+
+        TODO(result_collections): add more predefined result plots
+        TODO(result_collections): add more collections
+        TODO(result_collections): add random geodata if *_geodata is empty
+        TODO(result_collections): create GUI for plot customisation
+        """
         self.result_collections = {}
-        self.updateBusResultsCollection()
-        self.updateLineResultsCollection()
+        if 'bus' in selection:
+            self.updateBusResultsCollection()
+        if 'line' in selection:
+            self.updateLineResultsCollection()
+        if 'dummy' in selection:
+            self.updateDummyResultsCollection()
         # self.updateTrafoCollections()
         # self.updateLoadCollections()
         # self.updateExtGridCollections()
         self.drawResultCollections()
 
-    def drawCollections(self):
-        self.network_graph.canvas.ax.clear()
-        for name, c in self.collections.items():
-            if c is not None:
-                self.network_graph.canvas.ax.add_collection(c)
-        self.network_graph.canvas.ax.set_xlim((self.xmin*0.98, self.xmax*1.02))
-        self.network_graph.canvas.ax.set_ylim((self.ymin*0.98, self.ymax*1.02))
-        self.network_graph.canvas.draw()
-        logger.info("Drew Network Collections")
+    def clearResultCollectionsPlot(self):
+        """Empty results plot."""
+        self.result_plot.canvas.ax.cla()
+        self.result_plot.canvas.draw()
+        self.pushButton.setEnabled(False)
+        self.pushButton_2.setEnabled(False)
+        # self.result_plot.canvas.fig.clf()
 
     def drawResultCollections(self, plot_colorbars=True):
+        """Fill results plot."""
         self.result_plot.canvas.ax.clear()
         self.result_plot.canvas.cbar_load = {}
         for name, c in self.result_collections.items():
-            print(name)
             if c:
                 self.result_plot.canvas.ax.add_collection(c)
                 if plot_colorbars and hasattr(c, "has_colormap") and c.has_colormap:
                     extend = c.extend if hasattr(c, "extend") else "neither"
                     self.result_plot.canvas.cbar_load[name] = plt.colorbar(
-                        c, extend=extend, ax=self.result_plot.canvas.ax,
-                        shrink=0.9)  # TODO(drawResultCollections): reset shrinking factor
+                        c, extend=extend, ax=self.result_plot.canvas.ax, shrink=0.9)
         self.result_plot.canvas.ax.set_xlim((self.xmin*0.98, self.xmax*1.02))
         self.result_plot.canvas.ax.set_ylim((self.ymin*0.98, self.ymax*1.02))
         self.result_plot.canvas.draw()
 
-        for name in self.result_collections.keys():
+        # remove colorbar to avoid infitit extension
+        for name in self.result_plot.canvas.cbar_load.keys():
             self.result_plot.canvas.cbar_load[name].remove()
 
         logger.info("Drew Result Collections")
+
+    @pyqtSlot()
+    def on_click_standard_plot(self):
+        """Load the standard plot to the results plot."""
+        self.initialiseResultCollectionsPlot()
+
+    @pyqtSlot()
+    def on_click_dummy_plot(self):
+        """Load a nonstandard (here: dummy -> only trafos) plot to the results plot."""
+        self.initialiseResultCollectionsPlot(selection=['dummy'])
+
+    def updateDummyResultsCollection(self, redraw=False):
+        """Update dummy collection in results plot."""
+        t1, t2 = plot.create_trafo_symbol_collection(self.net, picker=True, size=self.scale*0.02,
+                                                     infofunc=lambda x: ("trafo", x))
+        self.result_collections["trafo2"] = t2
+        self.result_collections["trafo1"] = t1
+        if redraw:
+            self.drawResultCollections()
 
     def updateBusCollection(self, redraw=False):
         bc = plot.create_bus_collection(self.net, size=self.scale*0.01,
@@ -648,6 +695,7 @@ class mainWindow(QMainWindow):
             self.drawCollections()
 
     def updateBusResultsCollection(self, redraw=False):
+        """Update collection for buses in results plot."""
         cmap_list = [(0.975, "blue"), (1.0, "green"), (1.03, "red")]
         cmap, norm = plot.cmap_continous(cmap_list)
         bc = plot.create_bus_collection(
@@ -659,10 +707,9 @@ class mainWindow(QMainWindow):
             self.drawResultCollections()
 
     def updateExtGridCollections(self, redraw=False):
-        eg1, eg2 = plot.create_ext_grid_symbol_collection(self.net,
-                                                    size=self.scale*0.05,
-                zorder=2, picker=True,
-                infofunc=lambda x: ("ext_grid", x))
+        eg1, eg2 = plot.create_ext_grid_symbol_collection(
+            self.net, size=self.scale*0.05, zorder=2, picker=True,
+            infofunc=lambda x: ("ext_grid", x))
         self.collections["ext_grid1"] = eg1
         self.collections["ext_grid2"] = eg2
         if redraw:
@@ -677,20 +724,21 @@ class mainWindow(QMainWindow):
             self.drawCollections()
 
     def updateLineResultsCollection(self, redraw=False):
+        """Update collection for lines in results plot."""
         cmap_list = [(20, "green"), (50, "yellow"), (60, "red")]
         cmap, norm = plot.cmap_continous(cmap_list)
 
         lc = plot.create_line_collection(
             self.net, self.net.line.index, zorder=1, cmap=cmap, norm=norm, linewidths=1,
-            picker=True, infofunc=lambda x: ("line", x))  # use_line_geodata=False,
+            picker=True, infofunc=lambda x: ("line", x))
 
         self.result_collections["line"] = lc
         if redraw:
             self.drawCollections()
 
     def updateTrafoCollections(self, redraw=False):
-        t1, t2 = plot.create_trafo_symbol_collection(self.net, picker=True,
-                         size=self.scale*0.02, infofunc=lambda x: ("trafo", x))
+        t1, t2 = plot.create_trafo_symbol_collection(self.net, picker=True, size=self.scale*0.02,
+                                                     infofunc=lambda x: ("trafo", x))
         self.collections["trafo1"] = t1
         self.collections["trafo2"] = t2
         if redraw:
@@ -707,8 +755,8 @@ class mainWindow(QMainWindow):
 
     def updateGenCollections(self, redraw=False):
         l1, l2 = plot.create_gen_symbol_collection(self.net, size=self.scale*0.02,
-                                                    picker=True,
-                                                    infofunc=lambda x: ("gen", x))
+                                                   picker=True,
+                                                   infofunc=lambda x: ("gen", x))
         self.collections["gen1"] = l1
         self.collections["gen2"] = l2
         if redraw:
@@ -722,8 +770,8 @@ class mainWindow(QMainWindow):
         self.collections = {}
         self.drawCollections()
 
-    # show the network plot in widget_1
     def embedCollectionsBuilder(self):
+        """Show the network plot in widget_1."""
         self.dpi = 100
         self.network_graph = MplWidget(self.widget_1)
         # self.fig = plt.Figure()
@@ -731,6 +779,8 @@ class mainWindow(QMainWindow):
         # self.ax = self.fig.add_subplot(111)
         # self.ax.set_axis_bgcolor("white")
         # when a button is pressed on the canvas?
+        # FIXME(embedCollectionsBuilder): clicking elements does not work any more
+        # TODO(embedCollectionsBuilder): implement mouse-over events
         self.network_graph.canvas.mpl_connect('button_press_event', self.onCollectionsClick)
         # self.canvas.mpl_connect('button_release_event', self.onCollectionsClick)
         self.network_graph.canvas.mpl_connect('pick_event', self.onCollectionsPick)
@@ -744,18 +794,15 @@ class mainWindow(QMainWindow):
             left=0.0, right=1, top=1, bottom=0, wspace=0.02, hspace=0.04)
         self.dragged = None
 
-    # show the result plot in widget_2
     def embedResultCollectionsBuilder(self):
+        """Create a figure for result plots in widget_2.
+
+        # TODO(embedResultCollectionsBuilder): implement mouse-over events
+        """
         self.dpi = 100
         self.result_plot = MplWidget(self.widget_2)
-
-        # when a button is pressed on the canvas?
-        self.result_plot.canvas.mpl_connect('button_press_event', self.onCollectionsClick)
-        self.result_plot.canvas.mpl_connect('pick_event', self.onCollectionsPick)
-
         mpl_toolbar = NavigationToolbar(self.result_plot.canvas, self.widget_2)
         self.result_plot.add_toolbar(mpl_toolbar)
-
         self.result_plot.canvas.fig.subplots_adjust(
             left=0.0, right=1, top=1, bottom=0, wspace=0.02, hspace=0.04)
         self.dragged = None
@@ -771,7 +818,7 @@ class mainWindow(QMainWindow):
                                             self.updateBusCollection,
                                             geodata=geodata)
             except Exception as inst:
-                logger.warn("{}".format(inst))
+                logger.warning("{}".format(inst))
 
     def onCollectionsPick(self, event):
         if self.collectionsDoubleClick == False:
@@ -854,7 +901,7 @@ class mainWindow(QMainWindow):
                                               self.updateLoadCollections,
                                               bus=index)
             except Exception as e:
-                logger.warn("{}".format(e))
+                logger.warning("{}".format(e))
             self.lastBusSelected = None
         elif self.create_gen.isChecked():
             try:
@@ -862,7 +909,7 @@ class mainWindow(QMainWindow):
                                             self.updateGenCollections,
                                             bus=index)
             except Exception as e:
-                logger.warn("{}".format(e))
+                logger.warning("{}".format(e))
             self.lastBusSelected = None
         elif self.create_ext_grid.isChecked():
             try:
@@ -870,7 +917,7 @@ class mainWindow(QMainWindow):
                                                      self.updateExtGridCollections,
                                                      bus=index)
             except Exception as e:
-                logger.warn("{}".format(e))
+                logger.warning("{}".format(e))
             self.lastBusSelected = None
 
 
