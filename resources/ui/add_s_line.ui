@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>846</width>
-    <height>468</height>
+    <height>474</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -88,21 +88,6 @@
       </rect>
      </property>
     </widget>
-    <widget class="QWebView" name="webView_2">
-     <property name="geometry">
-      <rect>
-       <x>860</x>
-       <y>40</y>
-       <width>201</width>
-       <height>391</height>
-      </rect>
-     </property>
-     <property name="url">
-      <url>
-       <string>http://pandapower.readthedocs.io/en/v1.3.0/_images/line.png</string>
-      </url>
-     </property>
-    </widget>
     <widget class="QLabel" name="q_kvar_label">
      <property name="geometry">
       <rect>
@@ -177,20 +162,27 @@
     <attribute name="title">
      <string>Documentation</string>
     </attribute>
-    <widget class="QWebView" name="webView">
+    <widget class="QWidget" name="verticalLayoutWidget">
      <property name="geometry">
       <rect>
        <x>0</x>
        <y>10</y>
        <width>621</width>
-       <height>341</height>
+       <height>371</height>
       </rect>
      </property>
-     <property name="url">
-      <url>
-       <string>http://pandapower.readthedocs.io/en/v1.3.0/elements/line.html#line</string>
-      </url>
+     <layout class="QVBoxLayout" name="docsView"/>
+    </widget>
+    <widget class="QWidget" name="verticalLayoutWidget_2">
+     <property name="geometry">
+      <rect>
+       <x>630</x>
+       <y>0</y>
+       <width>211</width>
+       <height>391</height>
+      </rect>
      </property>
+     <layout class="QVBoxLayout" name="elementView"/>
     </widget>
    </widget>
   </widget>
@@ -221,13 +213,6 @@
    </property>
   </widget>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QWebView</class>
-   <extends>QWidget</extends>
-   <header>QtWebKitWidgets/QWebView</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

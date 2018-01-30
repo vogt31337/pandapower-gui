@@ -172,35 +172,27 @@
     <attribute name="title">
      <string>Documentation</string>
     </attribute>
-    <widget class="QWebView" name="webView_2">
+    <widget class="QWidget" name="verticalLayoutWidget">
      <property name="geometry">
       <rect>
-       <x>640</x>
-       <y>0</y>
-       <width>201</width>
-       <height>391</height>
-      </rect>
-     </property>
-     <property name="url">
-      <url>
-       <string>http://pandapower.readthedocs.io/en/v1.3.0/_images/bus.png</string>
-      </url>
-     </property>
-    </widget>
-    <widget class="QWebView" name="webView">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>10</y>
-       <width>611</width>
+       <x>9</x>
+       <y>9</y>
+       <width>621</width>
        <height>381</height>
       </rect>
      </property>
-     <property name="url">
-      <url>
-       <string>http://pandapower.readthedocs.io/en/v1.3.0/elements/bus.html#bus</string>
-      </url>
+     <layout class="QVBoxLayout" name="docsView"/>
+    </widget>
+    <widget class="QWidget" name="verticalLayoutWidget_2">
+     <property name="geometry">
+      <rect>
+       <x>639</x>
+       <y>-1</y>
+       <width>211</width>
+       <height>401</height>
+      </rect>
      </property>
+     <layout class="QVBoxLayout" name="elementView"/>
     </widget>
    </widget>
   </widget>
@@ -231,13 +223,6 @@
    </property>
   </widget>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QWebView</class>
-   <extends>QWidget</extends>
-   <header>QtWebKitWidgets/QWebView</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

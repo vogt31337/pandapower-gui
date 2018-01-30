@@ -14,6 +14,12 @@ try:
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
     from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
     _QT_VERSION = "5"
+
+    from PyQt5.QtWebEngineWidgets import QWebEngineView as QWebView
+    from PyQt5.QtWidgets import QMainWindow
+    from PyQt5 import uic
+
+    from PyQt5.QtCore import QUrl
 except ImportError:
     from PyQt4 import uic
     from PyQt4 import *
@@ -25,9 +31,10 @@ except ImportError:
 
 import pandapower as pp
 
-# Base Element Window Class
 
 class ElementWindow(QWidget):
+    """Base Element Window Class."""
+
     def __init__(self, net, element, create_function,
                  update_collection_function, **kwargs):
         super(ElementWindow, self).__init__()
@@ -36,6 +43,7 @@ class ElementWindow(QWidget):
         self.net = net
         self.element = element
         self.initialize_window()
+        self.initialize_docs()
         self.initialize_parameters(**kwargs)
         self.ok.clicked.connect(self.ok_clicked)
         self.cancel.clicked.connect(self.close)
@@ -50,6 +58,20 @@ class ElementWindow(QWidget):
             param = dict(self.net[self.element].loc[self.index])
             self.set_parameters(**param)
 
+    def initialize_docs(self, **kwargs):
+        # INFO(): replacement for the QtDesigner QWebView
+        view = QWebView()
+        # view.load(QUrl("https://pandapower.readthedocs.io/en/latest/elements/bus.html#bus"))
+        view.load(QUrl("https://pandapower.readthedocs.io/en/latest/elements/{}.html#{}".format(
+            self.element, self.element)))
+        view.setWindowTitle("pandapower Documentation")
+        self.docsView.addWidget(view)
+        view2 = QWebView()
+        view2.load(QUrl("https://pandapower.readthedocs.io/en/latest/_images/{}.png".format(
+            self.element)))
+        view2.setWindowTitle("pandapower Documentation")
+        self.elementView.addWidget(view2)
+
     def ok_clicked(self):
         if self.index is None:
             self.create_element()
@@ -61,27 +83,27 @@ class ElementWindow(QWidget):
     def create_element(self):
         param = self.get_parameters()
         self.index = self.create_function(self.net, **param)
-        print("created %s"%self.element)
+        print("created {}".format(self.element))
 
     def update_element(self):
         print("getting")
         param = self.get_parameters()
         print(param)
         self.net[self.element].loc[self.index, param.keys()] = param.values()
-        print("updated %s parameters"%self.element)
+        print("updated {} parameters".format(self.element))
 
-# Line Window Class
+
 class LineWindow(ElementWindow):
-    """ add a standard line """
+    """Line Window Class"""
+
     def __init__(self, net, update_function, **kwargs):
-        super(LineWindow, self).__init__(net, "line"
-                                         , update_collection_function=update_function
-                                         , create_function=pp.create_line
-                                         , **kwargs)
+        super(LineWindow, self).__init__(
+            net, "line", update_collection_function=update_function,
+            create_function=pp.create_line, **kwargs)
 
     def initialize_window(self):
         uic.loadUi('resources/ui/add_s_line.ui', self)
-        for stdLineType in pp.std_types.available_std_types(self.net).index:
+        for stdLineType in pp.std_types.available_std_types(self.net, element='line').index:
             self.standard_type.addItem(stdLineType)
         for availableBus in self.net.bus.index:
             self.from_bus.addItem(str(availableBus))
@@ -92,25 +114,61 @@ class LineWindow(ElementWindow):
                 "to_bus": int(self.to_bus.currentText()),
                 "length_km": float(self.length_km.toPlainText()),
                 "std_type": self.standard_type.currentText(),
-                 "name": self.name.toPlainText()}
+                "name": self.name.toPlainText()}
 
     def set_parameters(self, **kwargs):
         self.name.setText(kwargs.get("name", ""))
         self.length_km.setText(str(kwargs.get("length_km", 1)))
-        to_bus = self.to_bus.findText(str(kwargs.get("from_bus", "")))
+        to_bus = self.to_bus.findText(str(kwargs.get("to_bus", "")))
         self.to_bus.setCurrentIndex(to_bus)
-        from_bus = self.from_bus.findText(str(kwargs.get("to_bus", "")))
+        from_bus = self.from_bus.findText(str(kwargs.get("from_bus", "")))
         self.from_bus.setCurrentIndex(from_bus)
         std_type = self.standard_type.findText(kwargs.get("std_type", ""))
         self.standard_type.setCurrentIndex(std_type)
 
-class LoadWindow(ElementWindow):
-    """ add a standard line """
+
+class TrafoWindow(ElementWindow):
+    """Transformer Window Class"""
+
     def __init__(self, net, update_function, **kwargs):
-        super(LoadWindow, self).__init__(net, "load"
-                                         , update_collection_function=update_function
-                                         , create_function=pp.create_load
-                                         , **kwargs)
+        super(TrafoWindow, self).__init__(
+            net, "trafo", update_collection_function=update_function,
+            create_function=pp.create_transformer, **kwargs)
+
+    def initialize_window(self):
+        uic.loadUi('resources/ui/add_trafo.ui', self)
+        for stdTrafoType in pp.std_types.available_std_types(self.net, element='trafo').index:
+            self.standard_type.addItem(stdTrafoType)
+        for availableBus in self.net.bus.index:
+            print(".")
+            self.hv_bus.addItem(str(availableBus))
+            print("..")
+            self.lv_bus.addItem(str(availableBus))
+
+    def get_parameters(self):
+        return {"hv_bus": int(self.hv_bus.currentText()),
+                "lv_bus": int(self.lv_bus.currentText()),
+                "std_type": self.standard_type.currentText(),
+                "name": self.name.toPlainText()}
+
+    def set_parameters(self, **kwargs):
+        self.name.setText(kwargs.get("name", ""))
+        lv_bus = self.lv_bus.findText(str(kwargs.get("lv_bus", "")))
+        self.lv_bus.setCurrentIndex(lv_bus)
+        hv_bus = self.hv_bus.findText(str(kwargs.get("hv_bus", "")))
+        self.hv_bus.setCurrentIndex(hv_bus)
+        std_type = self.standard_type.findText(kwargs.get("std_type", ""))
+        self.standard_type.setCurrentIndex(std_type)
+
+
+
+class LoadWindow(ElementWindow):
+    """Add a standard line."""
+
+    def __init__(self, net, update_function, **kwargs):
+        super(LoadWindow, self).__init__(
+            net, "load", update_collection_function=update_function,
+            create_function=pp.create_load, **kwargs)
 
     def initialize_window(self):
         uic.loadUi('resources/ui/add_load.ui', self)
@@ -121,7 +179,7 @@ class LoadWindow(ElementWindow):
         return {"bus": int(self.bus.currentText()),
                 "p_kw": float(self.p_kw.toPlainText()),
                 "q_kvar": float(self.q_kvar.toPlainText()),
-                 "name": self.name.toPlainText()}
+                "name": self.name.toPlainText()}
 
     def set_parameters(self, **kwargs):
         self.name.setText(kwargs.get("name", ""))
@@ -130,14 +188,15 @@ class LoadWindow(ElementWindow):
         self.p_kw.setText(str(kwargs.get("p_kw", 0)))
         self.q_kvar.setText(str(kwargs.get("q_kvar", 0)))
 
-# Bus Window Class
 
 class BusWindow(ElementWindow):
+    """Bus Window Class."""
+
     def __init__(self, net, update_function, **kwargs):
-        super(BusWindow, self).__init__(net, "bus"
-                                         , update_collection_function = update_function
-                                         , create_function= pp.create_bus
-                                         , **kwargs)
+        super(BusWindow, self).__init__(
+            net, "bus", update_collection_function=update_function,
+            create_function=pp.create_bus, **kwargs)
+
     def initialize_window(self):
         uic.loadUi('resources/ui/add_bus.ui', self)
 
@@ -147,7 +206,7 @@ class BusWindow(ElementWindow):
             self.set_parameters(**kwargs)
         else:
             params = self.net[self.element].loc[self.index]
-            geotab = "%s_geodata"%self.element
+            geotab = "{}_geodata".format(self.element)
             params["geodata"] = self.net[geotab].loc[self.index].values
             self.set_parameters(**params)
 
@@ -162,22 +221,23 @@ class BusWindow(ElementWindow):
 
     def get_parameters(self):
         return {"vn_kv": float(self.vn_kv.toPlainText()),
-                 "name": self.name.toPlainText(),
-                 "geodata": (float(self.x_coord.toPlainText()),
-                              float(self.y_coord.toPlainText()))}
+                "name": self.name.toPlainText(),
+                "geodata": (float(self.x_coord.toPlainText()),
+                            float(self.y_coord.toPlainText()))}
 
     def update_element(self):
         param = self.get_parameters()
         geo_param = {"x": param["geodata"][0], "y": param["geodata"][1]}
         del param["geodata"]
         self.net[self.element].loc[self.index, param.keys()] = param.values()
-        self.net["%s_geodata"%self.element].loc[self.index, geo_param.keys()] = geo_param.values()
-        print("updated %s parameters"%self.element)
-
+        self.net["{}_geodata".format(self.element)].loc[
+            self.index, geo_param.keys()] = geo_param.values()
+        print("updated {} parameters".format(self.element))
 
 
 class GenWindow(ElementWindow):
-    """ add a standard gen """
+    """Add a standard gen."""
+
     def __init__(self, net, update_function, **kwargs):
         super(GenWindow, self).__init__(net, "gen",
                                         update_collection_function=update_function,
@@ -192,7 +252,7 @@ class GenWindow(ElementWindow):
     def get_parameters(self):
         return {"bus": int(self.bus.currentText()),
                 "p_kw": float(self.p_kw.toPlainText()),
-                 "name": self.name.toPlainText()}
+                "name": self.name.toPlainText()}
 
     def set_parameters(self, **kwargs):
         self.name.setText(kwargs.get("name", ""))
@@ -202,12 +262,12 @@ class GenWindow(ElementWindow):
 
 
 class ExtGridWindow(ElementWindow):
-    """ add an external grid """
+    """Add an external grid."""
+
     def __init__(self, net, update_function, **kwargs):
-        super(ExtGridWindow, self).__init__(net, "ext_grid",
-                                        update_collection_function=update_function,
-                                        create_function=pp.create_gen,
-                                        **kwargs)
+        super(ExtGridWindow, self).__init__(
+            net, "ext_grid", update_collection_function=update_function,
+            create_function=pp.create_gen, **kwargs)
 
     def initialize_window(self):
         uic.loadUi('resources/ui/add_ext_grid_s.ui', self)
@@ -217,7 +277,7 @@ class ExtGridWindow(ElementWindow):
     def get_parameters(self):
         return {"bus": int(self.bus.currentText()),
                 "vm_pu": float(self.vm_pu.toPlainText()),
-                 "name": self.name.toPlainText()}
+                "name": self.name.toPlainText()}
 
     def set_parameters(self, **kwargs):
         self.name.setText(kwargs.get("name", ""))

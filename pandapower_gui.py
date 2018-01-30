@@ -19,12 +19,14 @@ import pandapower.networks as pnw
 # import pandapower.plotting as pplot
 import pandapower.shortcircuit as sc
 
+
 # pandapower gui
 from element_windows import BusWindow
 from element_windows import ExtGridWindow
 from element_windows import GenWindow
 from element_windows import LineWindow
 from element_windows import LoadWindow
+from element_windows import TrafoWindow
 
 try:
     import pplog as logging
@@ -209,7 +211,7 @@ class mainWindow(QMainWindow):
 
         self.collectionsDoubleClick = False
 
-        self.tabWidget.setCurrentIndex(5)  # set firtst tab
+        self.tabWidget.setCurrentIndex(0)  # set firtst tab
 
         # menubar
         # self.actionNew_Network.triggered.connect(self.mainEmptyClicked)
@@ -716,9 +718,11 @@ class mainWindow(QMainWindow):
             self.drawCollections()
 
     def updateLineCollection(self, redraw=False):
-        lc = plot.create_line_collection(self.net, zorder=1, linewidths=1,
-                 picker=True, color="green",  # use_line_geodata=False,
-                 infofunc=lambda x: ("line", x))
+        lc = plot.create_line_collection(
+                self.net, self.net.line.index, zorder=1, linewidths=1,
+                picker=True, color="green",
+                use_bus_geodata=True,  # use_line_geodata=False,
+                infofunc=lambda x: ("line", x))
         self.collections["line"] = lc
         if redraw:
             self.drawCollections()
@@ -730,6 +734,7 @@ class mainWindow(QMainWindow):
 
         lc = plot.create_line_collection(
             self.net, self.net.line.index, zorder=1, cmap=cmap, norm=norm, linewidths=1,
+            use_bus_geodata=True,  # use_line_geodata=False,
             picker=True, infofunc=lambda x: ("line", x))
 
         self.result_collections["line"] = lc
@@ -878,8 +883,6 @@ class mainWindow(QMainWindow):
             if self.lastBusSelected is None:
                 self.lastBusSelected = index
             elif self.lastBusSelected != index:
-                # pp.create_line(self.net, self.lastBusSelected, index, length_km=1.0,
-                #                std_type="NAYY 4x50 SE")
                 self.build_message.setText(str(self.lastBusSelected)+"-"+str(index))
                 self.line_window = LineWindow(self.net,
                                               self.updateLineCollection,
@@ -890,11 +893,16 @@ class mainWindow(QMainWindow):
             if self.lastBusSelected is None:
                 self.lastBusSelected = index
             elif self.lastBusSelected != index:
-                pp.create_transformer(self.net, self.lastBusSelected, index,
-                                      std_type="0.25 MVA 10/0.4 kV")
+                self.build_message.setText(str(self.lastBusSelected)+"-"+str(index))
+                self.trafo_window = TrafoWindow(
+                    self.net, self.updateTrafoCollections, from_bus=self.lastBusSelected,
+                    to_bus=index)
                 self.lastBusSelected = None
-                self.updateTrafoCollections()
-                self.drawCollections()
+                # pp.create_transformer(self.net, self.lastBusSelected, index,
+                #                       std_type="0.25 MVA 10/0.4 kV")
+                # self.lastBusSelected = None
+                # self.updateTrafoCollections()
+                # self.drawCollections()
         elif self.create_load.isChecked():
             try:
                 self.load_window = LoadWindow(self.net,

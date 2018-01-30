@@ -202,46 +202,31 @@
     <attribute name="title">
      <string>Documentation</string>
     </attribute>
-    <widget class="QWebView" name="webView">
+    <widget class="QWidget" name="verticalLayoutWidget_2">
      <property name="geometry">
       <rect>
-       <x>0</x>
-       <y>10</y>
-       <width>651</width>
-       <height>391</height>
+       <x>640</x>
+       <y>20</y>
+       <width>211</width>
+       <height>401</height>
       </rect>
      </property>
-     <property name="url">
-      <url>
-       <string>http://pandapower.readthedocs.io/en/v1.3.0/elements/load.html#load</string>
-      </url>
-     </property>
+     <layout class="QVBoxLayout" name="elementView"/>
     </widget>
-    <widget class="QWebView" name="webView_2">
+    <widget class="QWidget" name="verticalLayoutWidget">
      <property name="geometry">
       <rect>
-       <x>660</x>
-       <y>10</y>
-       <width>201</width>
-       <height>391</height>
+       <x>10</x>
+       <y>30</y>
+       <width>621</width>
+       <height>381</height>
       </rect>
      </property>
-     <property name="url">
-      <url>
-       <string>http://pandapower.readthedocs.io/en/v1.3.0/_images/load.png</string>
-      </url>
-     </property>
+     <layout class="QVBoxLayout" name="docsView"/>
     </widget>
    </widget>
   </widget>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QWebView</class>
-   <extends>QWidget</extends>
-   <header>QtWebKitWidgets/QWebView</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
