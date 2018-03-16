@@ -293,24 +293,22 @@ class mainWindow(QMainWindow):
         self.ipyConsole.pushVariables({"pp": pp, "sc": sc})
 
     def mainLoadClicked(self):
-        # FIXME(mainLoadClicked): loading net from *.p and *.xlsx fails
-        file_to_open = ""
-        file_to_open = QFileDialog.getOpenFileName(filter="*.xlsx, *.p")
-        if file_to_open[0] != "":
-            fn = file_to_open[0]
-            if fn.endswith(".xlsx"):
-                try:
-                    net = pp.from_excel(file_to_open[0], convert=True)
-                except:
-                    logger.warning("couldn't open {}".format(fn))
-                    return
-            elif file_to_open[0].endswith(".p"):
-                try:
-                    net = pp.from_pickle(file_to_open[0], convert=True)
-                except:
-                    logger.warning("couldn't open {}".format(fn))
-                    return
-            self.load_network(net)
+        filename = QFileDialog.getOpenFileName(filter="*.json")  # "*.xlsx, *.p, *.json"
+        if filename[0]:
+            if filename[1]=="*.json":
+                net = pp.from_json(filename[0])
+            elif filename[1]=="*.xlsx":
+                net = pp.from_excel(filename[0])
+            elif filename[1]=="*.p":
+                net = pp.from_pickle(filename[0])
+            else:
+                net = pnw.create_empty_network()
+                logger.warning("Empty net created")
+
+        try:
+            self.load_network(net=net, name=filename[0].split('/')[-1])
+        except Exception:
+            logger.warning("No file loaded")
 
     def load_network(self, net, name):
         """Load a network."""
@@ -681,7 +679,7 @@ class mainWindow(QMainWindow):
 
     def updateDummyResultsCollection(self, redraw=False):
         """Update dummy collection in results plot."""
-        t1, t2 = plot.create_trafo_symbol_collection(self.net, picker=True, size=self.scale*0.02,
+        t1, t2 = plot.create_trafo_collection(self.net, picker=True, size=self.scale*0.02,
                                                      infofunc=lambda x: ("trafo", x))
         self.result_collections["trafo2"] = t2
         self.result_collections["trafo1"] = t1
@@ -709,7 +707,7 @@ class mainWindow(QMainWindow):
             self.drawResultCollections()
 
     def updateExtGridCollections(self, redraw=False):
-        eg1, eg2 = plot.create_ext_grid_symbol_collection(
+        eg1, eg2 = plot.create_ext_grid_collection(
             self.net, size=self.scale*0.05, zorder=2, picker=True,
             infofunc=lambda x: ("ext_grid", x))
         self.collections["ext_grid1"] = eg1
@@ -742,7 +740,7 @@ class mainWindow(QMainWindow):
             self.drawCollections()
 
     def updateTrafoCollections(self, redraw=False):
-        t1, t2 = plot.create_trafo_symbol_collection(self.net, picker=True, size=self.scale*0.02,
+        t1, t2 = plot.create_trafo_collection(self.net, picker=True, size=self.scale*0.02,
                                                      infofunc=lambda x: ("trafo", x))
         self.collections["trafo1"] = t1
         self.collections["trafo2"] = t2
@@ -750,7 +748,7 @@ class mainWindow(QMainWindow):
             self.drawCollections()
 
     def updateLoadCollections(self, redraw=False):
-        l1, l2 = plot.create_load_symbol_collection(self.net, size=self.scale*0.02,
+        l1, l2 = plot.create_load_collection(self.net, size=self.scale*0.02,
                                                     picker=True,
                                                     infofunc=lambda x: ("load", x))
         self.collections["load1"] = l1
@@ -759,7 +757,7 @@ class mainWindow(QMainWindow):
             self.drawCollections()
 
     def updateGenCollections(self, redraw=False):
-        l1, l2 = plot.create_gen_symbol_collection(self.net, size=self.scale*0.02,
+        l1, l2 = plot.create_gen_collection(self.net, size=self.scale*0.02,
                                                    picker=True,
                                                    infofunc=lambda x: ("gen", x))
         self.collections["gen1"] = l1
