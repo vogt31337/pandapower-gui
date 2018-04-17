@@ -205,9 +205,11 @@ class mainWindow(QMainWindow):
         self.result_plot.canvas.ax.autoscale_view(True, True, True)
 
         self.pushButton.clicked.connect(self.on_click_standard_plot)
-        self.pushButton_2.clicked.connect(self.on_click_dummy_plot)
+        self.pushButton_2.clicked.connect(self.on_click_line_loading_plot)
+        self.pushButton_3.clicked.connect(self.on_click_bus_voltage_plot)
         self.pushButton.setEnabled(False)
         self.pushButton_2.setEnabled(False)
+        self.pushButton_3.setEnabled(False)
 
         self.collectionsDoubleClick = False
 
@@ -377,6 +379,7 @@ class mainWindow(QMainWindow):
             self.initialiseResultCollectionsPlot()
             self.pushButton.setEnabled(True)
             self.pushButton_2.setEnabled(True)
+            self.pushButton_3.setEnabled(True)
         except pp.LoadflowNotConverged:
             self.mainPrintMessage("Power Flow did not Converge!")
         except:
@@ -618,7 +621,7 @@ class mainWindow(QMainWindow):
         logger.info("Drew Network Collections")
 
     # Result collections
-    def initialiseResultCollectionsPlot(self, selection=['bus', 'line']):
+    def initialiseResultCollectionsPlot(self, selection=['simple']):
         """Initialize results plot.
 
         TODO(result_collections): add more predefined result plots
@@ -627,6 +630,12 @@ class mainWindow(QMainWindow):
         TODO(result_collections): create GUI for plot customisation
         """
         self.result_collections = {}
+        if 'simple' in selection:
+            self.updateSimplePlotCollection()
+        if 'line_loading' in selection:
+            self.updateLineLoadingPlotCollection()
+        if 'bus_voltage' in selection:
+            self.updateBusVoltagePlotCollection()
         if 'bus' in selection:
             self.updateBusResultsCollection()
         if 'line' in selection:
@@ -644,6 +653,7 @@ class mainWindow(QMainWindow):
         self.result_plot.canvas.draw()
         self.pushButton.setEnabled(False)
         self.pushButton_2.setEnabled(False)
+        self.pushButton_3.setEnabled(False)
         # self.result_plot.canvas.fig.clf()
 
     def drawResultCollections(self, plot_colorbars=True):
@@ -669,8 +679,18 @@ class mainWindow(QMainWindow):
 
     @pyqtSlot()
     def on_click_standard_plot(self):
-        """Load the standard plot to the results plot."""
+        """Load the simple_plot to the results plot."""
         self.initialiseResultCollectionsPlot()
+
+    @pyqtSlot()
+    def on_click_line_loading_plot(self):
+        """Load the line loading plot to the results plot."""
+        self.initialiseResultCollectionsPlot(selection=['line_loading'])
+
+    @pyqtSlot()
+    def on_click_bus_voltage_plot(self):
+        """Load the bus voltage plot to the results plot."""
+        self.initialiseResultCollectionsPlot(selection=['bus_voltage'])
 
     @pyqtSlot()
     def on_click_dummy_plot(self):
@@ -679,10 +699,42 @@ class mainWindow(QMainWindow):
 
     def updateDummyResultsCollection(self, redraw=False):
         """Update dummy collection in results plot."""
-        t1, t2 = plot.create_trafo_collection(self.net, picker=True, size=self.scale*0.02,
-                                                     infofunc=lambda x: ("trafo", x))
+        t1, t2 = plot.create_trafo_collection(
+            self.net, picker=True, size=self.scale*0.02, infofunc=lambda x: ("trafo", x))
         self.result_collections["trafo2"] = t2
         self.result_collections["trafo1"] = t1
+        if redraw:
+            self.drawResultCollections()
+
+    def updateLineLoadingPlotCollection(self, redraw=True):
+        """Update line loading collection in results plot."""
+        cmap_list = [(20, "green"), (50, "yellow"), (60, "red")]
+        cmap, norm = plot.cmap_continous(cmap_list)
+
+        lc = plot.create_line_collection(
+            self.net, self.net.line.index, zorder=1, cmap=cmap, norm=norm, linewidths=2)
+
+        self.result_collections["line"] = lc
+
+        if redraw:
+            self.drawResultCollections()
+
+    def updateBusVoltagePlotCollection(self, redraw=True):
+        """Update bus voltage collection in results plot."""
+        cmap_list = [(20, "green"), (50, "yellow"), (60, "red")]
+        cmap, norm = plot.cmap_continous(cmap_list)
+
+        lc = plot.create_line_collection(
+            self.net, self.net.line.index, zorder=1, cmap=cmap, norm=norm, linewidths=2)
+
+        cmap_list = [(0.975, "blue"), (1.0, "green"), (1.03, "red")]
+        cmap, norm = plot.cmap_continous(cmap_list)
+        bc = plot.create_bus_collection(
+            self.net, self.net.bus.index, size=80, zorder=2, cmap=cmap, norm=norm)
+
+        self.result_collections["line"] = lc
+        self.result_collections["bus"] = bc
+
         if redraw:
             self.drawResultCollections()
 
@@ -693,6 +745,95 @@ class mainWindow(QMainWindow):
         self.collections["bus"] = bc
         if redraw:
             self.drawCollections()
+
+    def updateSimplePlotCollection(
+        self, redraw=True, respect_switches=False,  line_width=1.0, bus_size=1.0,
+        ext_grid_size=1.0, switch_size=1.0, switch_distance=1.0,
+        plot_line_switches=False, scale_size=True, bus_color="b", line_color='grey',
+        trafo_color='k', ext_grid_color='y', switch_color='k', library="igraph",
+        show_plot=True):
+        """Update collection simple_plot style in results plot."""
+        # don't hide lines if switches are plotted
+        if plot_line_switches:
+            respect_switches = False
+
+        # create geocoord if none are available
+        if len(self.net.line_geodata) == 0 and len(self.net.bus_geodata) == 0:
+            logger.warning("No or insufficient geodata available --> Creating artificial coordinates." +
+                           " This may take some time")
+            plot.create_generic_coordinates(self.net, respect_switches=respect_switches, library=library)
+
+        if scale_size:
+            # if scale_size -> calc size from distance between min and max geocoord
+            mean_distance_between_buses = sum((self.net['bus_geodata'].max() - self.net[
+                'bus_geodata'].min()) / 200)
+            # set the bus / ext_grid sizes accordingly
+            # Comment: This is implemented because if you would choose a fixed values
+            # (e.g. bus_size = 0.2), the size
+            # could be to small for large networks and vice versa
+            bus_size *= mean_distance_between_buses
+            ext_grid_size *= mean_distance_between_buses * 1.5
+            switch_size *= mean_distance_between_buses * 1
+            switch_distance *= mean_distance_between_buses * 2
+
+        # create bus collections to plot
+        bc = plot.create_bus_collection(self.net, self.net.bus.index, size=bus_size, color=bus_color, zorder=10)
+        if bc:
+            self.result_collections["bus"] = bc
+
+        # if bus geodata is available, but no line geodata
+        use_bus_geodata = len(self.net.line_geodata) == 0
+        in_service_lines = self.net.line[self.net.line.in_service].index
+        nogolines = set(self.net.switch.element[(self.net.switch.et == "l") & (self.net.switch.closed == 0)]) \
+            if respect_switches else set()
+        plot_lines = in_service_lines.difference(nogolines)
+
+        # create line collections
+        lc = plot.create_line_collection(
+            self.net, plot_lines, color=line_color, linewidths=line_width,
+            use_bus_geodata=use_bus_geodata)
+        if lc:
+            self.result_collections["line"] = lc
+
+        # create ext_grid collections
+        eg_buses_with_geo_coordinates = set(self.net.ext_grid.bus.values) & set(self.net.bus_geodata.index)
+        if len(eg_buses_with_geo_coordinates) > 0:
+            eg = plot.create_bus_collection(self.net, eg_buses_with_geo_coordinates, patch_type="rect",
+                                       size=ext_grid_size, color=ext_grid_color, zorder=11)
+        if eg:
+            self.result_collections["ext_grid"] = eg
+
+        # create trafo collection if trafo is available
+        trafo_buses_with_geo_coordinates = [t for t, trafo in self.net.trafo.iterrows()
+                                            if trafo.hv_bus in self.net.bus_geodata.index and
+                                            trafo.lv_bus in self.net.bus_geodata.index]
+        if len(trafo_buses_with_geo_coordinates) > 0:
+            tc = plot.create_trafo_collection(self.net, trafo_buses_with_geo_coordinates,
+                                                color=trafo_color)
+
+        # create trafo3w collection if trafo3w is available
+        trafo3w_buses_with_geo_coordinates = [
+            t for t, trafo3w in self.net.trafo3w.iterrows() if trafo3w.hv_bus in self.net.bus_geodata.index and
+            trafo3w.mv_bus in self.net.bus_geodata.index and trafo3w.lv_bus in self.net.bus_geodata.index]
+        if len(trafo3w_buses_with_geo_coordinates) > 0:
+            tc = plot.create_trafo3w_collection(self.net, trafo3w_buses_with_geo_coordinates,
+                                                  color=trafo_color)
+
+        if tc:
+            self.result_collections["trafo1"] = tc[0]
+            self.result_collections["trafo2"] = tc[1]
+
+
+        # FIXME: switches prevent the whole simple plot from functioning
+        # if plot_line_switches and len(self.net.switch):
+        #     sc = plot.create_line_switch_collection(
+        #         self.net, size=switch_size, distance_to_bus=switch_distance,
+        #         use_line_geodata=not use_bus_geodata, zorder=12, color=switch_color)
+        # if sc:
+        #     self.result_collections["switches"] = sc
+
+        if redraw:
+            self.drawResultCollections()
 
     def updateBusResultsCollection(self, redraw=False):
         """Update collection for buses in results plot."""

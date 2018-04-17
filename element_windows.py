@@ -267,7 +267,7 @@ class ExtGridWindow(ElementWindow):
     def __init__(self, net, update_function, **kwargs):
         super(ExtGridWindow, self).__init__(
             net, "ext_grid", update_collection_function=update_function,
-            create_function=pp.create_gen, **kwargs)
+            create_function=pp.create_ext_grid, **kwargs)
 
     def initialize_window(self):
         uic.loadUi('resources/ui/add_ext_grid_s.ui', self)
