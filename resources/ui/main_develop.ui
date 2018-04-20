@@ -465,7 +465,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>5</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
@@ -1012,7 +1012,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>Standard Overview Plot</string>
+        <string>Topology</string>
        </property>
       </widget>
       <widget class="QPushButton" name="pushButton_2">
@@ -1025,7 +1025,20 @@
         </rect>
        </property>
        <property name="text">
-        <string>Dummy Plot</string>
+        <string>Line Loading</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButton_3">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>100</y>
+         <width>181</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Bus Voltage</string>
        </property>
       </widget>
      </widget>
