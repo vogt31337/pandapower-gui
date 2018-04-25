@@ -6,6 +6,31 @@ Created on Sat Jun 03 17:57:27 2017
 """
 
 try:
+    """
+    for the pyqt version setup:
+    pyqt                      5.6.0            py36hb5ed885_5
+    """
+    from PyQt5 import uic
+    from PyQt5 import *
+    from PyQt5.QtGui import *
+    from PyQt5.QtWidgets import *
+    from PyQt5.QtCore import *
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+    _QT_VERSION = "5"
+
+    # from PyQt5.QtWebEngineWidgets import QWebEngineView as QWebView
+    from PyQt5.QtWebKitWidgets import QWebView
+    from PyQt5.QtWidgets import QMainWindow
+    from PyQt5 import uic
+
+    from PyQt5.QtCore import QUrl
+except ImportError:
+    """
+    for the pyqt version setup:
+    pyqt                      5.6.0            py35hd46907b_5
+    PyQt5                     5.10.1                    <pip>
+    """
     from PyQt5 import uic
     from PyQt5 import *
     from PyQt5.QtGui import *
@@ -16,18 +41,11 @@ try:
     _QT_VERSION = "5"
 
     from PyQt5.QtWebEngineWidgets import QWebEngineView as QWebView
+    # from PyQt5.QtWebKitWidgets import QWebView
     from PyQt5.QtWidgets import QMainWindow
     from PyQt5 import uic
 
     from PyQt5.QtCore import QUrl
-except ImportError:
-    from PyQt4 import uic
-    from PyQt4 import *
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
-    _QT_VERSION = "4"
 
 import pandapower as pp
 

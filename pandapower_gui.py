@@ -37,6 +37,44 @@ logger = logging.getLogger(__name__)
 
 #qt
 try:
+    """
+    for the pyqt version setup:
+    pyqt                      5.6.0            py36hb5ed885_5
+    """
+    from PyQt5 import uic
+
+    from PyQt5.QtCore import pyqtSlot
+    from PyQt5.QtCore import Qt
+    from PyQt5.QtCore import QTimer
+    from PyQt5.QtCore import QUrl
+
+    from PyQt5.QtGui import QIcon
+    from PyQt5.QtGui import QPixmap
+
+    from PyQt5.QtWebKitWidgets import QWebView
+
+    # from PyQt5 import QtWidgets
+    from PyQt5.QtWidgets import QApplication
+    from PyQt5.QtWidgets import QDialog
+    from PyQt5.QtWidgets import QFileDialog
+    from PyQt5.QtWidgets import QMainWindow
+    from PyQt5.QtWidgets import QMessageBox
+    from PyQt5.QtWidgets import QSizePolicy
+    from PyQt5.QtWidgets import QSplashScreen
+    from PyQt5.QtWidgets import QTableWidgetItem
+    from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.QtWidgets import QWidget
+
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+    QT_VERSION = "5"
+    logger.info("PyQt {} loaded".format(QT_VERSION))
+except ImportError:
+    """
+    for the pyqt version setup:
+    pyqt                      5.6.0            py35hd46907b_5
+    PyQt5                     5.10.1                    <pip>
+    """
     from PyQt5 import uic
 
     from PyQt5.QtCore import pyqtSlot
@@ -64,17 +102,6 @@ try:
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
     from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
     QT_VERSION = "5"
-    logger.info("PyQt {} loaded".format(QT_VERSION))
-except ImportError:
-    # FIXME: adapt imports to new classes
-    from qtpy import uic
-    from qtpy import *
-    from qtpy.QtCore import *
-    from qtpy.QtGui import *
-    from qtpy.QtWebEngineWidgets import *
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
-    QT_VERSION = "4"
     logger.info("PyQt {} loaded".format(QT_VERSION))
 
 import matplotlib.pyplot as plt
@@ -372,7 +399,7 @@ class mainWindow(QMainWindow):
             self.actionCigre_hv.triggered = False
 
     def runpp(self):
-        """Run pandpapower loadflow and trigger results output plot."""
+        """Run pandapapower loadflow and trigger results output plot."""
         try:
             pp.runpp(self.net, **self.net._runpp_options)
             self.mainPrintMessage(str(self.net))
