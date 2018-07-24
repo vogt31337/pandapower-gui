@@ -1182,7 +1182,7 @@ class runppOptions(QDialog):
 
 def displaySplashScreen(n=2):
     """Create and display the splash screen."""
-    splash_pix = QPixmap('resources/icons/panda-power.png')
+    splash_pix = QPixmap('resources/icons/pandapower.png')
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setMask(splash_pix.mask())
     splash.show()
