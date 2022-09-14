@@ -88,21 +88,6 @@
       </rect>
      </property>
     </widget>
-    <widget class="QWebView" name="webView_2">
-     <property name="geometry">
-      <rect>
-       <x>860</x>
-       <y>40</y>
-       <width>201</width>
-       <height>391</height>
-      </rect>
-     </property>
-     <property name="url">
-      <url>
-       <string>http://pandapower.readthedocs.io/en/v1.3.0/_images/line.png</string>
-      </url>
-     </property>
-    </widget>
     <widget class="QLabel" name="q_kvar_label">
      <property name="geometry">
       <rect>
@@ -173,26 +158,6 @@
      </property>
     </widget>
    </widget>
-   <widget class="QWidget" name="help">
-    <attribute name="title">
-     <string>Documentation</string>
-    </attribute>
-    <widget class="QWebView" name="webView">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>10</y>
-       <width>621</width>
-       <height>341</height>
-      </rect>
-     </property>
-     <property name="url">
-      <url>
-       <string>http://pandapower.readthedocs.io/en/v1.3.0/elements/line.html#line</string>
-      </url>
-     </property>
-    </widget>
-   </widget>
   </widget>
   <widget class="QPushButton" name="cancel">
    <property name="geometry">
@@ -221,13 +186,6 @@
    </property>
   </widget>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QWebView</class>
-   <extends>QWidget</extends>
-   <header>QtWebKitWidgets/QWebView</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

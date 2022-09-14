@@ -39,36 +39,6 @@
     <string>Edit ext grid</string>
    </property>
   </widget>
-  <widget class="QWebView" name="webView">
-   <property name="geometry">
-    <rect>
-     <x>470</x>
-     <y>10</y>
-     <width>431</width>
-     <height>611</height>
-    </rect>
-   </property>
-   <property name="url">
-    <url>
-     <string>http://pandapower.readthedocs.io/en/v1.3.0/elements/ext_grid.html#external-grid</string>
-    </url>
-   </property>
-  </widget>
-  <widget class="QWebView" name="webView_2">
-   <property name="geometry">
-    <rect>
-     <x>100</x>
-     <y>140</y>
-     <width>361</width>
-     <height>281</height>
-    </rect>
-   </property>
-   <property name="url">
-    <url>
-     <string>http://pandapower.readthedocs.io/en/v1.3.0/_images/ext_grid.png</string>
-    </url>
-   </property>
-  </widget>
   <widget class="QTableWidget" name="parameter_table">
    <property name="geometry">
     <rect>
@@ -144,13 +114,6 @@
    </item>
   </widget>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QWebView</class>
-   <extends>QWidget</extends>
-   <header>QtWebKitWidgets/QWebView</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
