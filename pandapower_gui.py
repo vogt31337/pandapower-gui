@@ -26,7 +26,7 @@ try:
     from PyQt5.QtGui import *
     from PyQt5.QtWidgets import *
     from PyQt5.QtCore import *
-    from PyQt5.QtWebKitWidgets import QWebView
+    from PyQt5.QtWebEngineWidgets import QWebEngineView as QWebView
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
     from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
     QT_VERSION = "5"
@@ -42,6 +42,7 @@ except ImportError:
 
 import pandapower.plotting as plot
 import matplotlib.pyplot as plt
+from matplotlib.backend_bases import PickEvent, MouseEvent, MouseButton
 
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
@@ -442,52 +443,75 @@ class mainWindow(QMainWindow):
         print("Drew Collections")
 
     def updateBusCollection(self, redraw=False):
-        bc = plot.create_bus_collection(self.net, size=self.scale*0.01,
-                zorder=2, picker=True, color="black",  patch_type="rect",
-                infofunc=lambda x: ("bus", x))
+        bc = plot.create_bus_collection(self.net,
+                                        size=self.scale*0.01,
+                                        zorder=2,
+                                        picker=True,
+                                        color="black",
+                                        patch_type="rect",
+                                        infofunc=lambda x: ("bus", x))
         self.collections["bus"] = bc
         if redraw:
             self.drawCollections()
 
     def updateExtGridCollections(self, redraw=False):
-        eg1, eg2 = plot.create_ext_grid_symbol_collection(self.net,
-                                                    size=self.scale*0.05,
-                zorder=2, picker=True,
-                infofunc=lambda x: ("ext_grid", x))
+        #eg1, eg2 = plot.create_ext_grid_symbol_collection(self.net,
+        #                                            size=self.scale*0.05,
+        #        zorder=2, picker=True,
+        #        infofunc=lambda x: ("ext_grid", x))
+        eg1, eg2 = plot.create_ext_grid_collection(self.net,
+                                                   size=self.scale*0.05,
+                                                   zorder=2, picker=True,
+                                                   infofunc=lambda x: ("ext_grid", x))
         self.collections["ext_grid1"] = eg1
         self.collections["ext_grid2"] = eg2
         if redraw:
             self.drawCollections()
 
     def updateLineCollection(self, redraw=False):
-        lc = plot.create_line_collection(self.net, zorder=1, linewidths=1,
-                 picker=True, use_line_geodata=False, color="green",
-                 infofunc=lambda x: ("line", x))
+        lc = plot.create_line_collection(self.net,
+                                         zorder=1,
+                                         linewidths=self.scale*0.25,
+                                         picker=True,
+                                         color="black",
+                                         infofunc=lambda x: ("line", x))
         self.collections["line"] = lc
         if redraw:
             self.drawCollections()
 
     def updateTrafoCollections(self, redraw=False):
-        t1, t2 = plot.create_trafo_symbol_collection(self.net, picker=True,
-                         size=self.scale*0.02, infofunc=lambda x: ("trafo", x))
+        #t1, t2 = plot.create_trafo_symbol_collection(self.net, picker=True,
+        #                 size=self.scale*0.02, infofunc=lambda x: ("trafo", x))
+        t1, t2 = plot.create_trafo_collection(self.net,
+                                              picker=True,
+                                              size=self.scale*0.02,
+                                              infofunc=lambda x: ("trafo", x))
         self.collections["trafo1"] = t1
         self.collections["trafo2"] = t2
         if redraw:
             self.drawCollections()
 
     def updateLoadCollections(self, redraw=False):
-        l1, l2 = plot.create_load_symbol_collection(self.net, size=self.scale*0.02,
-                                                    picker=True,
-                                                    infofunc=lambda x: ("load", x))
+        #l1, l2 = plot.create_load_symbol_collection(self.net, size=self.scale*0.02,
+        #                                            picker=True,
+        #                                            infofunc=lambda x: ("load", x))
+        l1, l2 = plot.create_load_collection(self.net,
+                                             size=self.scale*0.02,
+                                             picker=True,
+                                             infofunc=lambda x: ("load", x))
         self.collections["load1"] = l1
         self.collections["load2"] = l2
         if redraw:
             self.drawCollections()
 
     def updateGenCollections(self, redraw=False):
-        l1, l2 = plot.create_gen_symbol_collection(self.net, size=self.scale*0.02,
-                                                    picker=True,
-                                                    infofunc=lambda x: ("gen", x))
+        #l1, l2 = plot.create_gen_symbol_collection(self.net, size=self.scale*0.02,
+        #                                            picker=True,
+        #                                            infofunc=lambda x: ("gen", x))
+        l1, l2 = plot.create_gen_collection(self.net,
+                                            size=self.scale*0.02,
+                                            picker=True,
+                                            infofunc=lambda x: ("gen", x))
         self.collections["gen1"] = l1
         self.collections["gen2"] = l2
         if redraw:
@@ -510,6 +534,7 @@ class mainWindow(QMainWindow):
         self.canvas.mpl_connect('button_press_event', self.onCollectionsClick)
         #self.canvas.mpl_connect('button_release_event', self.onCollectionsClick)
         self.canvas.mpl_connect('pick_event', self.onCollectionsPick)
+        self.canvas.mpl_connect('motion_notify_event', self.onMotionEvent)
         mpl_toolbar = NavigationToolbar(self.canvas, self.main_build_frame)
         self.gridLayout.addWidget(self.canvas)
         self.gridLayout.addWidget(mpl_toolbar)
@@ -524,9 +549,7 @@ class mainWindow(QMainWindow):
         if self.create_bus.isChecked():
             geodata = (event.xdata, event.ydata)
             try:
-                self.bus_window = BusWindow(self.net
-                                            , self.updateBusCollection
-                                            , geodata=geodata)
+                self.bus_window = BusWindow(self.net, self.updateBusCollection, geodata=geodata)
             except Exception as inst:
                 print(inst)
 
@@ -535,10 +558,21 @@ class mainWindow(QMainWindow):
             QTimer.singleShot(200,
                               partial(self.performcollectionsSingleClickActions, event))
 
-    def performcollectionsSingleClickActions(self, event):
+    def onMotionEvent(self, event: MouseEvent):
+        if event.button == MouseButton.LEFT:
+            # print(event)
+            pass
+
+    def performcollectionsSingleClickActions(self, event: PickEvent):
         print("picked")
         collection = event.artist
-        element, index = collection.info[event.ind[0]]
+        index = event.ind[0]
+        element = collection.info[event.ind[0]]
+
+        # for some reason only buses are tuples
+        if type(element) is tuple:
+            element = element[0]
+
         print("====", event.ind[0])
         print("====", collection)
         print("single")
@@ -551,40 +585,43 @@ class mainWindow(QMainWindow):
                 print("Double Clicked a ", element)
                 self.open_element_window(element, index)
         else:
-            self.collectionsSingleClickActions(event, element, index)
+            self.collectionsSingleClickActions(event, element, index, collection)
 
 
     def open_element_window(self, element, index):
         if element == "bus":
             print("will build bus")
-            self.element_window = BusWindow(self.net
-                                        , self.updateBusCollection
-                                        , index=index)
+            self.element_window = BusWindow(self.net,
+                                            self.updateBusCollection,
+                                            index=index)
         elif element == "line":
             print("will bild line")
             print(index)
             self.element_window = LineWindow(self.net,
-                                              self.updateLineCollection,
-                                              index=index)
+                                             self.updateLineCollection,
+                                             index=index)
         elif element == "load":
             self.element_window = LoadWindow(self.net,
-                                              self.updateLoadCollections,
-                                              index=index)
+                                             self.updateLoadCollections,
+                                             index=index)
         elif element == "gen":
             self.element_window = GenWindow(self.net,
-                                              self.updateGenCollections,
-                                              index=index)
+                                            self.updateGenCollections,
+                                            index=index)
         elif element == "ext_grid":
             self.element_window = ExtGridWindow(self.net,
-                                              self.updateExtGridCollections,
-                                              index=index)
+                                                self.updateExtGridCollections,
+                                                index=index)
         elif element == "trafo":
             print("trafo doubleclicked")
+            self.element_window = TrafoWindow(self.net,
+                                              self.updateTrafoCollections,
+                                              index=index)
 
-    def collectionsSingleClickActions(self, event, element, index):
+    def collectionsSingleClickActions(self, event, element, index, collection):
         #what to do when single clicking on an element
-        if element != "bus":
-            return
+        #if element != "bus":
+        #    return
         if self.create_line.isChecked():
             if self.lastBusSelected is None:
                 self.lastBusSelected = index
@@ -628,7 +665,9 @@ class mainWindow(QMainWindow):
             except Exception as e:
                 print(e)
             self.lastBusSelected = None
-        	
+        elif self.create_edit_elements.isChecked():
+            print(element)
+            pass
 
 
 class runppOptions(QDialog):
@@ -699,7 +738,7 @@ def createSampleNetwork():
 
     #create bus elements
     pp.create_ext_grid(net, bus=b1, vm_pu=1.02, name="Grid Connection")
-    pp.create_load(net, bus=b3, p_kw=100, q_kvar=50, name="Load")
+    pp.create_load(net, bus=b3, p_mw=0.1, q_mvar=0.05, name="Load")
 
     #create branch elements
     tid = pp.create_transformer(net, hv_bus=b1, lv_bus=b2, std_type="0.4 MVA 20/0.4 kV",
@@ -709,9 +748,9 @@ def createSampleNetwork():
 
     return net
 
+
 if __name__ == '__main__':
-    app = 0
     app = QApplication(sys.argv)
-    displaySplashScreen()
+    # displaySplashScreen()
     window = mainWindow()
     sys.exit(app.exec_())
