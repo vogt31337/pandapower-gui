@@ -119,16 +119,16 @@ class LoadWindow(ElementWindow):
 
     def get_parameters(self):
         return {"bus": int(self.bus.currentText()),
-                "p_kw": float(self.p_kw.toPlainText()),
-                "q_kvar": float(self.q_kvar.toPlainText()),
+                "p_mw": float(self.p_mw.toPlainText()),
+                "q_mvar": float(self.q_mvar.toPlainText()),
                  "name": self.name.toPlainText()}
 
     def set_parameters(self, **kwargs):
         self.name.setText(kwargs.get("name", ""))
         bus = self.bus.findText(str(kwargs.get("bus", "")))
         self.bus.setCurrentIndex(bus)
-        self.p_kw.setText(str(kwargs.get("p_kw", 0)))
-        self.q_kvar.setText(str(kwargs.get("q_kvar", 0)))
+        self.p_mw.setText(str(kwargs.get("p_mw", 0)))
+        self.q_mvar.setText(str(kwargs.get("q_mvar", 0)))
 
 # Bus Window Class
 
@@ -191,14 +191,14 @@ class GenWindow(ElementWindow):
 
     def get_parameters(self):
         return {"bus": int(self.bus.currentText()),
-                "p_kw": float(self.p_kw.toPlainText()),
+                "p_mw": float(self.p_mw.toPlainText()),
                  "name": self.name.toPlainText()}
 
     def set_parameters(self, **kwargs):
         self.name.setText(kwargs.get("name", ""))
         bus = self.bus.findText(str(kwargs.get("bus", "")))
         self.bus.setCurrentIndex(bus)
-        self.p_kw.setText(str(kwargs.get("p_kw", 0)))
+        self.p_mw.setText(str(kwargs.get("p_mw", 0)))
 
 
 class ExtGridWindow(ElementWindow):
@@ -224,3 +224,29 @@ class ExtGridWindow(ElementWindow):
         bus = self.bus.findText(str(kwargs.get("bus", "")))
         self.bus.setCurrentIndex(bus)
         self.vm_pu.setText(str(kwargs.get("vm_pu", 0)))
+
+
+class TrafoWindow(ElementWindow):
+    """ add an external grid """
+    def __init__(self, net, update_function, **kwargs):
+        super(TrafoWindow, self).__init__(net, "trafo",
+                                        update_collection_function=update_function,
+                                        create_function=pp.create_gen,
+                                        **kwargs)
+
+    def initialize_window(self):
+        uic.loadUi('resources/ui/add_ext_grid_s.ui', self)
+        for availableBus in self.net.bus.index:
+            self.bus.addItem(str(availableBus))
+
+    def get_parameters(self):
+        return {"bus": int(self.bus.currentText()),
+                "vm_pu": float(self.vm_pu.toPlainText()),
+                 "name": self.name.toPlainText()}
+
+    def set_parameters(self, **kwargs):
+        self.name.setText(kwargs.get("name", ""))
+        bus = self.bus.findText(str(kwargs.get("bus", "")))
+        self.bus.setCurrentIndex(bus)
+        self.vm_pu.setText(str(kwargs.get("vm_pu", 0)))
+
